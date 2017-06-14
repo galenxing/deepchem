@@ -12,7 +12,7 @@ from deepchem.models.tensorgraph import TensorGraph
 from deepchem.metrics import to_one_hot
 
 from deepchem.feat.mol_graphs import ConvMol
-from deepchem.models.tensorgraph.layers import Input, GraphConvLayer, BatchNormLayer, GraphPoolLayer, Dense, GraphGather, \
+from deepchem.models.tensorgraph.layers import Input, GraphConv, BatchNorm, GraphPool, Dense, GraphGather, \
   SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature
 
 np.random.seed(123)
@@ -36,22 +36,22 @@ def graph_conv_model(batch_size, tasks):
   for i in range(0, 10 + 1):
     deg_adj = Feature(shape=(None, i + 1), dtype=tf.int32)
     deg_adjs.append(deg_adj)
-  gc1 = GraphConvLayer(
+  gc1 = GraphConv(
       64,
       activation_fn=tf.nn.relu,
       in_layers=[atom_features, degree_slice, membership] + deg_adjs)
-  batch_norm1 = BatchNormLayer(in_layers=[gc1])
-  gp1 = GraphPoolLayer(
+  batch_norm1 = BatchNorm(in_layers=[gc1])
+  gp1 = GraphPool(
       in_layers=[batch_norm1, degree_slice, membership] + deg_adjs)
-  gc2 = GraphConvLayer(
+  gc2 = GraphConv(
       64,
       activation_fn=tf.nn.relu,
       in_layers=[gp1, degree_slice, membership] + deg_adjs)
-  batch_norm2 = BatchNormLayer(in_layers=[gc2])
-  gp2 = GraphPoolLayer(
+  batch_norm2 = BatchNorm(in_layers=[gc2])
+  gp2 = GraphPool(
       in_layers=[batch_norm2, degree_slice, membership] + deg_adjs)
   dense = Dense(out_channels=128, activation_fn=None, in_layers=[gp2])
-  batch_norm3 = BatchNormLayer(in_layers=[dense])
+  batch_norm3 = BatchNorm(in_layers=[dense])
   gg1 = GraphGather(
       batch_size=batch_size,
       activation_fn=tf.nn.tanh,
@@ -99,13 +99,14 @@ tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv')
 train_dataset, valid_dataset, test_dataset = tox21_datasets
 print(train_dataset.data_dir)
 print(valid_dataset.data_dir)
+print(test_dataset.data_dir)
 
 # Fit models
 metric = dc.metrics.Metric(
     dc.metrics.roc_auc_score, np.mean, mode="classification")
 
 # Batch size of models
-batch_size = 50
+batch_size = 100
 
 model, generator, labels, task_weights = graph_conv_model(batch_size,
                                                           tox21_tasks)
@@ -123,9 +124,17 @@ valid_scores = model.evaluate_generator(
     transformers,
     labels,
     weights=[task_weights])
+test_scores = model.evaluate_generator(
+    generator(valid_dataset, batch_size), [metric], 
+    transformers, 
+    labels, 
+    weights=[task_weights])
 
 print("Train scores")
 print(train_scores)
 
 print("Validation scores")
 print(valid_scores)
+
+print("Test scores")
+print(test_scores)
