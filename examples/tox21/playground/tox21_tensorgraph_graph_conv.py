@@ -25,7 +25,7 @@ from record_info import record_info
 
 model_dir = "/tmp/graph_conv"
 
-num_epochs = 20
+num_epochs = 10
 
 
 def graph_conv_model(batch_size, tasks):
@@ -121,17 +121,17 @@ train_scores = model.evaluate_generator(
     generator(train_dataset, batch_size), [metric],
     transformers,
     labels,
-    weights=[task_weights])
+    weights=[task_weights], per_task_metrics = True)
 valid_scores = model.evaluate_generator(
     generator(valid_dataset, batch_size), [metric],
     transformers,
     labels,
-    weights=[task_weights])
+    weights=[task_weights], per_task_metrics = True)
 test_scores = model.evaluate_generator(
     generator(test_dataset, batch_size), [metric], 
     transformers, 
     labels, 
-    weights=[task_weights])
+    weights=[task_weights], per_task_metrics = True)
 
 print("Train scores")
 print(train_scores)
@@ -142,4 +142,4 @@ print(valid_scores)
 print("Test scores")
 print(test_scores)
 
-record_info("tensorgraph_graph_conv.csv", train_scores, valid_scores, test_scores, num_epochs, len(tox21_tasks))
+record_info("hiv_tox21.csv", train_scores, valid_scores, test_scores, num_epochs, len(tox21_tasks))

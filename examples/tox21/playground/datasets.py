@@ -20,9 +20,9 @@ def load_tox21(featurizer='ECFP', split='index'):
   #tox21_tasks = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase', 'NR-ER',
    #              'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
     #             'SR-HSE', 'SR-MMP', 'SR-p53']
-  tox21_tasks = ['NR-AR','NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','HIV_active','NR-ER',
+  tox21_tasks = ['NR-AR','NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','NR-ER',
                  'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
-                 'SR-HSE', 'SR-MMP', 'SR-p53']
+                 'SR-HSE', 'SR-MMP', 'SR-p53', 'HIV_active']
   if featurizer == 'ECFP':
     featurizer_func = dc.feat.CircularFingerprint(size=1024)
   elif featurizer == 'GraphConv':
