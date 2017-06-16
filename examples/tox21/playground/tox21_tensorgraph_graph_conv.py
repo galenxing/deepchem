@@ -25,7 +25,7 @@ from record_info import record_info
 
 model_dir = "/tmp/graph_conv"
 
-num_epochs = 3
+num_epochs = 20
 
 
 def graph_conv_model(batch_size, tasks):
@@ -141,7 +141,5 @@ print(valid_scores)
 
 print("Test scores")
 print(test_scores)
-
-print(train_scores.values())
 
 record_info("tensorgraph_graph_conv.csv", train_scores, valid_scores, test_scores, num_epochs, len(tox21_tasks))
