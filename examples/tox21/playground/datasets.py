@@ -10,19 +10,17 @@ import numpy as np
 import shutil
 import deepchem as dc
 
-def load_tox21(featurizer='ECFP', split='index'):
+def load_tox21(tasks, featurizer='ECFP', split='index' ):
   """Load Tox21 datasets. Does not do train/test split"""
   # Featurize Tox21 dataset
   print("About to featurize Tox21 dataset.")
   current_dir = os.path.dirname(os.path.realpath(__file__))
   dataset_file = os.path.join(
-      current_dir, "../../../datasets/tox21_hiv.csv.gz")
+      current_dir, "../../../datasets/tox21.csv.gz")
   #tox21_tasks = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase', 'NR-ER',
-   #              'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
-    #             'SR-HSE', 'SR-MMP', 'SR-p53']
-  tox21_tasks = ['NR-AR','NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','NR-ER',
-                 'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
-                 'SR-HSE', 'SR-MMP', 'SR-p53', 'HIV_active']
+  #               'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
+  #               'SR-HSE', 'SR-MMP', 'SR-p53','HIV_active']
+  tox21_tasks = tasks
   if featurizer == 'ECFP':
     featurizer_func = dc.feat.CircularFingerprint(size=1024)
   elif featurizer == 'GraphConv':
@@ -45,7 +43,8 @@ def load_tox21(featurizer='ECFP', split='index'):
   splitters = {'index': dc.splits.IndexSplitter(),
                'random': dc.splits.RandomSplitter(),
                'scaffold': dc.splits.ScaffoldSplitter(),
-               'butina': dc.splits.ButinaSplitter()}
+               'butina': dc.splits.ButinaSplitter(),
+               'fingerprint': dc.splits.FingerprintSplitter()}
   splitter = splitters[split]
   train, valid, test = splitter.train_valid_test_split(dataset)
   return tox21_tasks, (train, valid, test), transformers

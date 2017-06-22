@@ -95,7 +95,7 @@ def graph_conv_model(batch_size, tasks):
 
 
 # Load Tox21 dataset
-tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv')
+tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split = 'random')
 train_dataset, valid_dataset, test_dataset = tox21_datasets
 print(train_dataset.data_dir)
 print(valid_dataset.data_dir)
@@ -111,7 +111,7 @@ batch_size = 100
 model, generator, labels, task_weights = graph_conv_model(batch_size,
                                                           tox21_tasks)
 
-model.fit_generator(generator(train_dataset, batch_size, epochs=10))
+model.fit_generator(generator(train_dataset, batch_size, epochs=20))
 
 print("Evaluating model")
 train_scores = model.evaluate_generator(
