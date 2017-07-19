@@ -53,9 +53,13 @@ model.fit(train_dataset, nb_epoch=10)
 print("Evaluating model")
 train_scores = model.evaluate(train_dataset, [metric], transformers)
 valid_scores = model.evaluate(valid_dataset, [metric], transformers)
+test_scores = model.evaluate(test_dataset, [metric], transformers)
 
 print("Train scores")
 print(train_scores)
 
 print("Validation scores")
 print(valid_scores)
+
+print("Test Scores")
+print(test_scores)

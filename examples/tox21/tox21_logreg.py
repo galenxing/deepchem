@@ -27,15 +27,19 @@ model = dc.models.TensorflowLogisticRegression(
     weight_init_stddevs=[0.002], batch_size=32)
 
 # Fit trained model
-model.fit(train_dataset,nb_epoch = 50)
+model.fit(train_dataset,nb_epoch = 25)
 model.save()
 
 print("Evaluating model")
 train_scores = model.evaluate(train_dataset, [metric], transformers)
 valid_scores = model.evaluate(valid_dataset, [metric], transformers)
+test_scores = model.evaluate(test_dataset, [metric], transformers)
 
 print("Train scores")
 print(train_scores)
 
 print("Validation scores")
 print(valid_scores)
+
+print("Test scores")
+print(test_scores)
