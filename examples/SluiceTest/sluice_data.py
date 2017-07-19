@@ -4,38 +4,46 @@ Tox21 dataset loader.
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
+from pprint import pprint
+
 
 import os
 import numpy as np
 import shutil
 import deepchem as dc
+func = lambda x, k: round((x + k) % 4)
+func = np.vectorize(func)
 
 
 def load_sluice():
     sluice_tasks = ['func1', 'func2']
-    X = np.random.randint(0, high=10, size=[1000, 1])
-    X = X.astype(np.float64)
-    y1 = np.copy(X)
-    y2 = np.copy(y1)
 
-    y1 += 5
-    y2 += 10
+    X = np.random.rand(10000, 1)
+    y1 = np.copy(X)
+    y2 = np.copy(X)
+
+    y1 = func(y1, 35)
+    y2 = func(y2, 50)
+    pprint(X[:20])
+    pprint(y1[:20])
+    pprint(y2[:20])
 
     y = np.concatenate((y1, y2), axis=1)
 
     print(X[:20])
-    temp_X = np.zeros((10000, 10))
+    #temp_X = np.zeros((1000, 10))
     for row, value in enumerate(X):
+        break
         temp_X[row, X[row, 0]] = 1
 
-    X = temp_X
-    X_train = X[:800]
-    X_valid = X[800:900]
-    X_test = X[900:1000]
+    #X = temp_X
+    X_train = X[:8000]
+    X_valid = X[8000:9000]
+    X_test = X[9000:10000]
 
-    y_train = y[:800]
-    y_valid = y[800:900]
-    y_test = y[900:1000]
+    y_train = y[:8000]
+    y_valid = y[8000:9000]
+    y_test = y[9000:10000]
 
     train = dc.data.NumpyDataset(X=X_train, y=y_train, n_tasks=2)
     valid = dc.data.NumpyDataset(X=X_valid, y=y_valid, n_tasks=2)

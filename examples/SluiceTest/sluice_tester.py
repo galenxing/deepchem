@@ -36,8 +36,8 @@ def graph_conv_model(batch_size, tasks):
                         batch_size=batch_size, use_queue=False)
     sluice_cost = []
 
-    X1 = Feature(shape=(None, 10))
-    X2 = Feature(shape=(None, 10))
+    X1 = Feature(shape=(None, 1))
+    X2 = Feature(shape=(None, 1))
 
     d1a = Dense(out_channels=10, activation_fn=tf.nn.relu, in_layers=[X1])
     d1b = Dense(out_channels=10, activation_fn=tf.nn.relu, in_layers=[X2])
