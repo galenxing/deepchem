@@ -11,7 +11,7 @@ import os
 import numpy as np
 import shutil
 import deepchem as dc
-func = lambda x, k: round((x + k) % 4)
+func = lambda x, k: round((x + k) % 5)
 func = np.vectorize(func)
 
 
@@ -22,8 +22,8 @@ def load_sluice():
     y1 = np.copy(X)
     y2 = np.copy(X)
 
-    y1 = func(y1, 35)
-    y2 = func(y2, 50)
+    y1 = func(y1, 78)
+    y2 = func(y2, 53)
     pprint(X[:20])
     pprint(y1[:20])
     pprint(y2[:20])

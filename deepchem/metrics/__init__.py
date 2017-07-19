@@ -285,7 +285,13 @@ class Metric(object):
         y_true = y_true.astype(int)
         # Reshape to handle 1-d edge cases
         y_pred = np.reshape(y_pred, (n_samples, n_classes))
+        print("y_true after reshape")
+        print(y_true[:20])
+        y_pred = np.reshape(y_pred, (n_samples, n_classes))
         y_pred = from_one_hot(y_pred)
+        print("y_pred after reshape")
+        print(y_pred[:20])
+
     else:
       y_pred = np.reshape(y_pred, (n_samples,))
 
