@@ -19,10 +19,9 @@ tf.set_random_seed(123)
 import deepchem as dc
 from sluice_data import load_sluice
 
-from two_layer_sluice import graph_conv_model
-#from three_layer_dense import graph_conv_model
-#from hard_param_mt import graph_conv_model
+from sluice_tg_models import two_layer_sluice, hard_param_mt, three_layer_dense
 
+graph_conv_model = three_layer_dense
 
 # Load Tox21 dataset
 sluice_tasks, sluice_datasets, transformers = load_sluice()
