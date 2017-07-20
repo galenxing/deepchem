@@ -9,7 +9,7 @@ from deepchem.models.models import Model
 from deepchem.models.sklearn_models import SklearnModel
 from deepchem.models.xgboost_models import XGBoostModel
 from deepchem.models.tf_new_models.multitask_classifier import MultitaskGraphClassifier
-from deepchem.models.tf_new_models.multitask_regressor import MultitaskGraphRegressor
+from deepchem.models.tf_new_models.multitask_regressor import MultitaskGraphRegressor, DTNNMultitaskGraphRegressor
 
 from deepchem.models.tf_new_models.support_classifier import SupportGraphClassifier
 from deepchem.models.multitask import SingletaskToMultitask
@@ -28,4 +28,5 @@ from deepchem.models.tensorflow_models.progressive_multitask import ProgressiveM
 from deepchem.models.tensorflow_models.progressive_joint import ProgressiveJointRegressor
 from deepchem.models.tensorflow_models.IRV import TensorflowMultiTaskIRVClassifier
 from deepchem.models.tensorgraph.tensor_graph import TensorGraph
-from deepchem.models.tensorgraph.models.graph_models import WeaveTensorGraph, DTNNTensorGraph, DAGTensorGraph
+from deepchem.models.tensorgraph.models.graph_models import WeaveTensorGraph, DTNNTensorGraph, DAGTensorGraph, GraphConvTensorGraph
+from deepchem.models.tensorgraph.models.symmetry_function_regression import BPSymmetryFunctionRegression, ANIRegression

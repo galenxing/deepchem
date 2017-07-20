@@ -1,11 +1,12 @@
 """
 Script that trains graph-conv models on Tox21 dataset.
 """
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import numpy as np
+<<<<<<< HEAD
 import six
 
 from deepchem.models.tensorgraph import TensorGraph
@@ -14,6 +15,8 @@ from deepchem.metrics import to_one_hot
 from deepchem.feat.mol_graphs import ConvMol
 from deepchem.models.tensorgraph.layers import Input, GraphConv, BatchNorm, GraphPool, Dense, GraphGather, \
   SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature
+=======
+>>>>>>> e8593fc7fa03ffa0289248c6c24d6643cb5df739
 
 np.random.seed(123)
 import tensorflow as tf
@@ -21,9 +24,11 @@ import tensorflow as tf
 tf.set_random_seed(123)
 import deepchem as dc
 from tox21_datasets import load_tox21
+from deepchem.models.tensorgraph.models.graph_models import GraphConvTensorGraph
 
 model_dir = "/tmp/graph_conv"
 
+<<<<<<< HEAD
 
 def graph_conv_model(batch_size, tasks):
   model = TensorGraph(
@@ -94,6 +99,8 @@ def graph_conv_model(batch_size, tasks):
   return model, feed_dict_generator, labels, task_weights
 
 
+=======
+>>>>>>> e8593fc7fa03ffa0289248c6c24d6643cb5df739
 # Load Tox21 dataset
 tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split = 'random')
 train_dataset, valid_dataset, test_dataset = tox21_datasets
@@ -108,9 +115,10 @@ metric = dc.metrics.Metric(
 # Batch size of models
 batch_size = 100
 
-model, generator, labels, task_weights = graph_conv_model(batch_size,
-                                                          tox21_tasks)
+model = GraphConvTensorGraph(
+    len(tox21_tasks), batch_size=batch_size, mode='classification')
 
+<<<<<<< HEAD
 model.fit_generator(generator(train_dataset, batch_size, epochs=20))
 
 print("Evaluating model")
@@ -129,6 +137,13 @@ test_scores = model.evaluate_generator(
     transformers, 
     labels, 
     weights=[task_weights])
+=======
+model.fit(train_dataset, nb_epoch=10)
+
+print("Evaluating model")
+train_scores = model.evaluate(train_dataset, [metric], transformers)
+valid_scores = model.evaluate(valid_dataset, [metric], transformers)
+>>>>>>> e8593fc7fa03ffa0289248c6c24d6643cb5df739
 
 print("Train scores")
 print(train_scores)

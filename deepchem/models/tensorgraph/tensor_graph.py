@@ -69,7 +69,8 @@ class TensorGraph(Model):
         tf.train.AdamOptimizer,
         learning_rate=learning_rate,
         beta1=0.9,
-        beta2=0.999)
+        beta2=0.999,
+        epsilon=1e-7)
 
     # Singular place to hold Tensor objects which don't serialize
     # These have to be reconstructed on restoring from pickle
@@ -93,6 +94,10 @@ class TensorGraph(Model):
     super(TensorGraph, self).__init__(**kwargs)
     self.save_file = "%s/%s" % (self.model_dir, "model")
     self.model_class = None
+
+    self.rnn_initial_states = []
+    self.rnn_final_states = []
+    self.rnn_zero_states = []
 
   def _add_layer(self, layer):
     if layer.name is None:
@@ -169,6 +174,7 @@ class TensorGraph(Model):
             break
           if self.global_step % checkpoint_interval == checkpoint_interval - 1:
             saver.save(sess, self.save_file, global_step=self.global_step)
+            self.last_checkpoint = saver.last_checkpoints[-1]
             avg_loss = float(avg_loss) / n_batches
             print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                               avg_loss))
@@ -226,6 +232,9 @@ class TensorGraph(Model):
           feed_dict[self.features[0]] = X_b
         if len(self.task_weights) == 1 and w_b is not None and not predict:
           feed_dict[self.task_weights[0]] = w_b
+        for (inital_state, zero_state) in zip(self.rnn_initial_states,
+                                              self.rnn_zero_states):
+          feed_dict[initial_state] = zero_state
         yield feed_dict
 
   def predict_on_generator(self, generator, transformers=[]):
@@ -328,6 +337,9 @@ class TensorGraph(Model):
         with tf.name_scope(node):
           node_layer = self.layers[node]
           node_layer.create_tensor(training=self._training_placeholder)
+          self.rnn_initial_states += node_layer.rnn_initial_states
+          self.rnn_final_states += node_layer.rnn_final_states
+          self.rnn_zero_states += node_layer.rnn_zero_states
       self.built = True
 
     for layer in self.layers.values():
@@ -384,11 +396,41 @@ class TensorGraph(Model):
     """
     self.optimizer = optimizer
 
+  def get_pickling_errors(self, obj, seen=None):
+    if seen == None:
+      seen = []
+    try:
+      state = obj.__getstate__()
+    except AttributeError:
+      return
+    if state == None:
+      return
+    if isinstance(state, tuple):
+      if not isinstance(state[0], dict):
+        state = state[1]
+      else:
+        state = state[0].update(state[1])
+    result = {}
+    for i in state:
+      try:
+        pickle.dumps(state[i], protocol=2)
+      except pickle.PicklingError:
+        if not state[i] in seen:
+          seen.append(state[i])
+          result[i] = self.get_pickling_errors(state[i], seen)
+    return result
+
   def save(self):
     # Remove out_tensor from the object to be pickled
     must_restore = False
     tensor_objects = self.tensor_objects
+    rnn_initial_states = self.rnn_initial_states
+    rnn_final_states = self.rnn_final_states
+    rnn_zero_states = self.rnn_zero_states
     self.tensor_objects = {}
+    self.rnn_initial_states = []
+    self.rnn_final_states = []
+    self.rnn_zero_states = []
     out_tensors = []
     if self.built:
       must_restore = True
@@ -402,7 +444,11 @@ class TensorGraph(Model):
     # Pickle itself
     pickle_name = os.path.join(self.model_dir, "model.pickle")
     with open(pickle_name, 'wb') as fout:
-      pickle.dump(self, fout)
+      try:
+        pickle.dump(self, fout)
+      except Exception as e:
+        print(self.get_pickling_errors(self))
+        raise e
 
     # add out_tensor back to everyone
     if must_restore:
@@ -412,6 +458,9 @@ class TensorGraph(Model):
       self._training_placeholder = training_placeholder
       self.built = True
     self.tensor_objects = tensor_objects
+    self.rnn_initial_states = rnn_initial_states
+    self.rnn_final_states = rnn_final_states
+    self.rnn_zero_states = rnn_zero_states
 
   def evaluate_generator(self,
                          feed_dict_generator,
@@ -424,13 +473,17 @@ class TensorGraph(Model):
 
     if labels is None:
       raise ValueError
+    n_tasks = len(self.outputs)
+    n_classes = self.outputs[0].out_tensor.get_shape()[-1].value
     evaluator = GeneratorEvaluator(
         self,
         feed_dict_generator,
         transformers,
         labels=labels,
         outputs=outputs,
-        weights=weights)
+        weights=weights,
+        n_tasks=n_tasks,
+        n_classes=n_classes)
     if not per_task_metrics:
       scores = evaluator.compute_model_performance(metrics)
       return scores
@@ -492,6 +545,7 @@ class TensorGraph(Model):
     if self.last_checkpoint is None:
       sess.run(tf.global_variables_initializer())
       saver.save(sess, self.save_file, global_step=self.global_step)
+      self.last_checkpoint = saver.last_checkpoints[-1]
     else:
       saver.restore(sess, self.last_checkpoint)
 
@@ -511,10 +565,13 @@ class TensorGraph(Model):
       tensorgraph.built = False
       return tensorgraph
 
+  def __del__(self):
+    pass
+
 
 def _enqueue_batch(tg, generator, graph, sess, coord):
   """
-  Function to load data into 
+  Function to load data into
   Parameters
   ----------
   tg
