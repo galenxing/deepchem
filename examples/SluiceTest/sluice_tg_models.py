@@ -12,7 +12,7 @@ import tensorflow as tf
 
 tf.set_random_seed(123)
 
-model_dir = "/tmp/graph_conv"
+model_dir = "graph_conv/three_dense"
 
 
 def to_one_hot(y, n_classes=20):
@@ -25,7 +25,7 @@ def to_one_hot(y, n_classes=20):
 
 def three_layer_dense(batch_size, tasks):
     model = TensorGraph(model_dir=model_dir,
-                        batch_size=batch_size, use_queue=False)
+                        batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -85,7 +85,7 @@ def three_layer_dense(batch_size, tasks):
 
 def hard_param_mt(batch_size, tasks):
     model = TensorGraph(model_dir=model_dir,
-                        batch_size=batch_size, use_queue=False)
+                        batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -132,7 +132,7 @@ def hard_param_mt(batch_size, tasks):
 
 def two_layer_sluice(batch_size, tasks):
     model = TensorGraph(model_dir=model_dir,
-                        batch_size=batch_size, use_queue=False)
+                        batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -189,15 +189,14 @@ def two_layer_sluice(batch_size, tasks):
         costs.append(cost)
 
     s_cost = SluiceLoss(in_layers=sluice_cost)
+    model.set_sluiceloss(s_cost)
     entropy = Concat(in_layers=costs)
     task_weights = Weights(shape=(None, len(tasks)))
     loss = WeightedError(in_layers=[entropy, task_weights])
-    loss = Add(in_layers=[loss, s_cost])
+    s_loss = Add(in_layers=[loss, s_cost])
     model.set_alphas([as1, as2])
     model.set_betas([b1, b2])
-    model.set_loss(loss)
-
-    
+    model.set_loss(s_loss)
 
     def feed_dict_generator(dataset, batch_size, epochs=1):
         for epoch in range(epochs):

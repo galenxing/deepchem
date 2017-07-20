@@ -23,7 +23,7 @@ class TensorGraph(Model):
 
     def __init__(self,
                  tensorboard=False,
-                 tensorboard_log_frequency=100,
+                 tensorboard_log_frequency=10,
                  batch_size=100,
                  random_seed=None,
                  use_queue=True,
@@ -66,6 +66,7 @@ class TensorGraph(Model):
         self.task_weights = list()
         self.alphas = list()
         self.betas = list()
+        self.sluiceloss = None
         self.loss = None
         self.built = False
         self.queue_installed = False
@@ -179,8 +180,9 @@ class TensorGraph(Model):
                         self.global_step += 1
                         n_samples += 1
                         if self.tensorboard and n_samples % self.tensorboard_log_frequency == 0:
+                            sum_ops = self._get_tf("summary_op")
                             summary = sess.run(
-                                self._get_tf("summary_op"), feed_dict=feed_dict)
+                                sum_ops, feed_dict=feed_dict)
                             self._log_tensorboard(summary)
                     except OutOfRangeError:
                         break
@@ -373,7 +375,8 @@ class TensorGraph(Model):
         for layer in self.layers.values():
             if layer.tensorboard:
                 self.tensorboard = True
-        tf.summary.scalar("loss", self.loss.out_tensor)
+        #tf.summary.scalar("loss", self.loss.out_tensor)
+
         for layer in self.layers.values():
             if layer.tensorboard:
                 tf.summary.tensor_summary(layer.name, layer.out_tensor)
@@ -411,6 +414,10 @@ class TensorGraph(Model):
     def set_loss(self, layer):
         self._add_layer(layer)
         self.loss = layer
+
+    def set_sluiceloss(self, layer):
+        self._add_layer(layer)
+        self.sluiceloss = layer
 
     def add_output(self, layer):
         self._add_layer(layer)
