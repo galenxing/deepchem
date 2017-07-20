@@ -195,8 +195,9 @@ def two_layer_sluice(batch_size, tasks):
     loss = Add(in_layers=[loss, s_cost])
     model.set_alphas([as1, as2])
     model.set_betas([b1, b2])
-
     model.set_loss(loss)
+
+    
 
     def feed_dict_generator(dataset, batch_size, epochs=1):
         for epoch in range(epochs):
