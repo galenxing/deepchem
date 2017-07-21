@@ -21,9 +21,9 @@ train_dataset, valid_dataset, test_dataset = tox21_datasets
 metric = dc.metrics.Metric(dc.metrics.roc_auc_score, np.mean,
                            mode="classification")
 
-n_layers = 1
-n_bypass_layers = 1
-nb_epoch = 10
+n_layers = 2
+n_bypass_layers = 5
+nb_epoch = 7 
 model = dc.models.RobustMultitaskClassifier(
     len(tox21_tasks), train_dataset.get_data_shape()[0],
     layer_sizes=[500]*n_layers, bypass_layer_sizes=[50]*n_bypass_layers,
@@ -41,9 +41,15 @@ model.save()
 print("Evaluating model")
 train_scores = model.evaluate(train_dataset, [metric], transformers)
 valid_scores = model.evaluate(valid_dataset, [metric], transformers)
+test_scores = model.evaluate(test_dataset, [metric], transformers)
+
 
 print("Train scores")
 print(train_scores)
 
 print("Validation scores")
 print(valid_scores)
+
+print("Test scores")
+print(test_scores)
+
