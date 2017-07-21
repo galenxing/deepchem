@@ -196,19 +196,21 @@ def two_layer_sluice(batch_size, tasks):
     cost = SoftMaxCrossEntropy(in_layers=[label, classification])
     costs.append(cost)
 
-  s_cost = SluiceLoss(in_layers=sluice_cost)
+  #s_cost = SluiceLoss(in_layers=sluice_cost)
  
   entropy = Concat(in_layers=costs)
   task_weights = Weights(shape=(None, len(tasks)))
   loss = WeightedError(in_layers=[entropy, task_weights])
+  
   minimizer = Constant(0)
-  s_cost = Multiply(in_layers=[minimizer, s_cost])
-  s_loss = Add(in_layers=[loss, s_cost])
+  #s_cost = Multiply(in_layers=[minimizer, s_cost])
+  #s_loss = Add(in_layers=[loss, s_cost])
 
-  model.set_sluiceloss(s_cost)
+  #model.set_sluiceloss(s_cost)
   model.set_alphas([as1, as2])
   model.set_betas([b1, b2])
-  model.set_loss(s_loss)
+
+  model.set_loss(loss)
 
   def feed_dict_generator(dataset, batch_size, epochs=1):
     for epoch in range(epochs):

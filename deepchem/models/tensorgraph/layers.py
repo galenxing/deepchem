@@ -233,7 +233,6 @@ class SluiceLoss(Layer):
             # calculate squared Frobenius norm
             temp.append(tf.reduce_sum(tf.pow(product, 2)))
         out_tensor = tf.reduce_sum(temp)
-        tf.summary.scalar("sluice loss", out_tensor)
         self.out_tensor = out_tensor
         return out_tensor
 

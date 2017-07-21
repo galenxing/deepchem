@@ -376,6 +376,7 @@ class TensorGraph(Model):
             if layer.tensorboard:
                 self.tensorboard = True
         #tf.summary.scalar("loss", self.loss.out_tensor)
+        #tf.summary.scalar("sluice loss", self.sluiceloss.out_tensor)
 
         for layer in self.layers.values():
             if layer.tensorboard:

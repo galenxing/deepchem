@@ -45,7 +45,7 @@ print('labels')
 print(labels)
 
 model.fit_generator(
-    generator(train_dataset, batch_size, epochs=100), checkpoint_interval=200)
+    generator(train_dataset, batch_size, epochs=1000), checkpoint_interval=200)
 
 print("Evaluating model")
 train_scores = model.evaluate_generator(
