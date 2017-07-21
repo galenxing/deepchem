@@ -12,8 +12,6 @@ import tensorflow as tf
 
 tf.set_random_seed(123)
 
-model_dir = "/tmp/graph_conv"
-
 
 def to_one_hot(y, n_classes=20):
     n_samples = np.shape(y)[0]
@@ -24,8 +22,8 @@ def to_one_hot(y, n_classes=20):
 
 
 def three_layer_dense(batch_size, tasks):
-    model = TensorGraph(model_dir=model_dir,
-                        batch_size=batch_size, use_queue=False)
+    model = TensorGraph(model_dir='graphconv/three_layer_dense',
+                        batch_size=batch_size, use_queue=False, tensorboard = True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -84,8 +82,8 @@ def three_layer_dense(batch_size, tasks):
 
 
 def hard_param_mt(batch_size, tasks):
-    model = TensorGraph(model_dir=model_dir,
-                        batch_size=batch_size, use_queue=False)
+    model = TensorGraph(model_dir='graphconv/hard_param_mt',
+                        batch_size=batch_size, use_queue=False, tensorboard = True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -131,8 +129,8 @@ def hard_param_mt(batch_size, tasks):
 
 
 def two_layer_sluice(batch_size, tasks):
-    model = TensorGraph(model_dir=model_dir,
-                        batch_size=batch_size, use_queue=False)
+    model = TensorGraph(model_dir='graphconv/two_layer_sluice',
+                        batch_size=batch_size, use_queue=False, tensorboard = True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))

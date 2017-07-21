@@ -64,8 +64,6 @@ class TensorGraph(Model):
         self.labels = list()
         self.outputs = list()
         self.task_weights = list()
-        self.alphas = list()
-        self.betas = list()
         self.loss = None
         self.built = False
         self.queue_installed = False
@@ -92,6 +90,8 @@ class TensorGraph(Model):
         self.global_step = 0
         self.last_checkpoint = None
         self.use_queue = use_queue
+        self.alphas = list()
+        self.betas = list()
 
         self.batch_size = batch_size
         self.random_seed = random_seed
@@ -165,7 +165,6 @@ class TensorGraph(Model):
                 output_tensors = [x.out_tensor for x in self.outputs]
                 alphas = [x.alphas for x in self.alphas]
                 betas = [x.betas for x in self.betas]
-
                 fetches = output_tensors + alphas + \
                     betas + [train_op, self.loss.out_tensor]
                 for feed_dict in create_feed_dict():

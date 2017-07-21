@@ -21,7 +21,7 @@ from sluice_data import load_sluice
 
 from sluice_tg_models import two_layer_sluice, hard_param_mt, three_layer_dense
 
-graph_conv_model = three_layer_dense
+graph_conv_model = two_layer_sluice
 
 # Load Tox21 dataset
 sluice_tasks, sluice_datasets, transformers = load_sluice()
