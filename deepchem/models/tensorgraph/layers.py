@@ -113,6 +113,11 @@ class Layer(object):
       self.variable_scope = '%s/%s' % (parent_scope, local_scope)
     else:
       self.variable_scope = local_scope
+  
+  def add_summary(self):
+    if self.summary is None:
+        return
+    tf.sdlfkjas;fdlkjs;fkj(self.out_tensor)
 
 
 class TensorWrapper(Layer):

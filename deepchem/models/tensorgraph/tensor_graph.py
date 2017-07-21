@@ -65,6 +65,9 @@ class TensorGraph(Model):
         self.outputs = list()
         self.task_weights = list()
         self.loss = None
+        self.sluice_loss = None
+        self.total_loss = None
+
         self.built = False
         self.queue_installed = False
         self.optimizer = TFWrapper(
@@ -373,6 +376,9 @@ class TensorGraph(Model):
             if layer.tensorboard:
                 self.tensorboard = True
         tf.summary.scalar("loss", self.loss.out_tensor)
+        tf.summary.scalar("sluice_loss", self.sluice_loss.out_tensor)
+        tf.summary.scalar("loss minus sluice", self.total_loss.out_tensor)
+
         for layer in self.layers.values():
             if layer.tensorboard:
                 tf.summary.tensor_summary(layer.name, layer.out_tensor)
@@ -411,6 +417,14 @@ class TensorGraph(Model):
         self._add_layer(layer)
         self.loss = layer
 
+    def set_sluice_loss(self, layer):
+        self._add_layer(layer)
+        self.sluice_loss = layer
+
+    def set_total_loss(self, layer):
+        self._add_layer(layer)
+        self.total_loss = layer
+
     def add_output(self, layer):
         self._add_layer(layer)
         self.outputs.append(layer)
@@ -424,6 +438,18 @@ class TensorGraph(Model):
         for layer in layers:
             self._add_layer(layer)
             self.betas.append(layer)
+    """
+    def add_summary_op(self, summary_op, name, layer, summary_description=None, collections=None):
+        self._add_layer(layer)
+        
+        if summary_op == 'tensor_summary':
+          tf.summary.tensor_summary()
+        elif summary_op == 'scalar':
+        elif summary_op == 'histogram':
+        elif summary_op == 'image':
+        else:
+          raise ValueError('Invalide summary_op arg')
+    """
 
     def set_optimizer(self, optimizer):
         """Set the optimizer to use for fitting.

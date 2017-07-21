@@ -4,7 +4,7 @@ import six
 
 from deepchem.models.tensorgraph import TensorGraph
 from deepchem.feat.mol_graphs import ConvMol
-from deepchem.models.tensorgraph.layers import Input, GraphConv, Add, SluiceLoss, BatchNorm, GraphPool, Dense, GraphGather, BetaShare,  LayerSplitter, SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature, AlphaShare
+from deepchem.models.tensorgraph.layers import Input, GraphConv, Add, Constant, Multiply,  SluiceLoss, BatchNorm, GraphPool, Dense, GraphGather, BetaShare,  LayerSplitter, SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature, AlphaShare
 
 
 np.random.seed(123)
@@ -23,7 +23,7 @@ def to_one_hot(y, n_classes=20):
 
 def three_layer_dense(batch_size, tasks):
     model = TensorGraph(model_dir='graphconv/three_layer_dense',
-                        batch_size=batch_size, use_queue=False, tensorboard = True)
+                        batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -83,7 +83,7 @@ def three_layer_dense(batch_size, tasks):
 
 def hard_param_mt(batch_size, tasks):
     model = TensorGraph(model_dir='graphconv/hard_param_mt',
-                        batch_size=batch_size, use_queue=False, tensorboard = True)
+                        batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -128,9 +128,9 @@ def hard_param_mt(batch_size, tasks):
     return model, feed_dict_generator, labels, task_weights
 
 
-def two_layer_sluice(batch_size, tasks):
-    model = TensorGraph(model_dir='graphconv/two_layer_sluice',
-                        batch_size=batch_size, use_queue=False, tensorboard = True)
+def two_layer_sluice(batch_size, tasks, minimizer):
+    model = TensorGraph(model_dir='graphconv/two_layer_sluice/'+str(minimizer),
+                        batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
 
     X1 = Feature(shape=(None, 1))
@@ -187,15 +187,22 @@ def two_layer_sluice(batch_size, tasks):
         costs.append(cost)
 
     s_cost = SluiceLoss(in_layers=sluice_cost)
+    
+
     entropy = Concat(in_layers=costs)
     task_weights = Weights(shape=(None, len(tasks)))
-    loss = WeightedError(in_layers=[entropy, task_weights])
-    loss = Add(in_layers=[loss, s_cost])
+    total_loss = WeightedError(in_layers=[entropy, task_weights])
+    model.set_total_loss(total_loss)
+
+    minimizer = Constant(minimizer)
+    s_cost = Multiply(in_layers =[minimizer, s_cost])
+    model.set_sluice_loss(s_cost)
+
+    new_loss = Add(in_layers=[total_loss, s_cost])
     model.set_alphas([as1, as2])
     model.set_betas([b1, b2])
-    model.set_loss(loss)
 
-    
+    model.set_loss(new_loss)
 
     def feed_dict_generator(dataset, batch_size, epochs=1):
         for epoch in range(epochs):
