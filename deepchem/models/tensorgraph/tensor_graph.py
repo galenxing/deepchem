@@ -340,6 +340,8 @@ class TensorGraph(Model):
           self.rnn_initial_states += node_layer.rnn_initial_states
           self.rnn_final_states += node_layer.rnn_final_states
           self.rnn_zero_states += node_layer.rnn_zero_states
+          #node_layer.add_sumamry()
+
       self.built = True
 
     for layer in self.layers.values():
