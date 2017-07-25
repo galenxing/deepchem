@@ -92,7 +92,8 @@ class Layer(object):
     if reshape and len(tensors) > 1:
       shapes = [t.get_shape() for t in tensors]
       if any(s != shapes[0] for s in shapes[1:]):
-        # Reshape everything to match the input with the most dimensions.
+        # Reshape everything to match the input with the most
+        # dimensions.
 
         shape = shapes[0]
         for s in shapes:
@@ -106,18 +107,40 @@ class Layer(object):
   def _record_variable_scope(self, local_scope):
     """Record the scope name used for creating variables.
 
-    This should be called from create_tensor().  It allows the list of variables
-    belonging to this layer to be retrieved later."""
+        This should be called from create_tensor().  It allows the list of variables
+        belonging to this layer to be retrieved later."""
     parent_scope = tf.get_variable_scope().name
     if len(parent_scope) > 0:
       self.variable_scope = '%s/%s' % (parent_scope, local_scope)
     else:
       self.variable_scope = local_scope
-  
+
   def add_summary(self):
-    if self.summary is None:
-        return
-    tf.sdlfkjas;fdlkjs;fkj(self.out_tensor)
+    if self.tensorboard == False:
+      return
+    if self.summary_op == "tensor_summary":
+      tf.summary.tensor_summary(self.name, self.out_tensor,
+                                self.summary_description, self.collections)
+    elif self.summary_op == 'scalar':
+      tf.summary.scalar(self.name, self.out_tensor, self.collections)
+    elif self.summary_op == 'histogram':
+      tf.summary.histogram(self.name, self.values, self.collections)
+
+  def set_summary(self,
+                  summary_op,
+                  name=None,
+                  summary_description=None,
+                  collections=None):
+    supported_ops = {'tensor_summary', 'scalar', 'histogram'}
+    if summary_op not in supported_ops:
+      raise ValueError("Invalid summary_op arg")
+    if self.name == None and name == None:
+      raise ValueError("Name not previously set. Name param is required")
+
+    self.name = name
+    self.summary_description = summary_description
+    self.collections = collections
+    self.tensorboard = True
 
 
 class TensorWrapper(Layer):
@@ -141,131 +164,139 @@ def convert_to_layers(in_layers):
     elif isinstance(in_layer, tf.Tensor):
       layers.append(TensorWrapper(in_layer))
     else:
-      raise ValueError("convert_to_layers must be invoked on layers or tensors")
+      raise ValueError(
+          "convert_to_layers must be invoked on layers or tensors")
   return layers
 
 
 class AlphaShare(Layer):
-    """
-    Part of a sluice network. Adds alpha parameters to control
-    sharing between the main and auxillary tasks
-    """
+  """
+      Part of a sluice network. Adds alpha parameters to control
+      sharing between the main and auxillary tasks
+      """
 
-    def __init__(self, **kwargs):
-        super(AlphaShare, self).__init__(**kwargs)
+  def __init__(self, **kwargs):
+    super(AlphaShare, self).__init__(**kwargs)
 
-    def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
-        inputs = self._get_input_tensors(in_layers)
-        # check that there isnt just one or zero inputs
-        if len(inputs) <= 1:
-            raise ValueError("AlphaShare must have more than one input")
+  def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
+    inputs = self._get_input_tensors(in_layers)
+    # check that there isnt just one or zero inputs
+    if len(inputs) <= 1:
+      raise ValueError("AlphaShare must have more than one input")
 
-        # create subspaces
-        subspaces = []
-        original_cols = int(inputs[0].get_shape()[-1].value)
-        subspace_size = int(original_cols / 2)
-        for input_tensor in inputs:
-            subspaces.append(tf.reshape(input_tensor[:, :subspace_size], [-1]))
-            subspaces.append(tf.reshape(input_tensor[:, subspace_size:], [-1]))
-        n_alphas = len(inputs) * 2
-        subspaces = tf.reshape(tf.stack(subspaces), [n_alphas, -1])
+    # create subspaces
+    subspaces = []
+    original_cols = int(inputs[0].get_shape()[-1].value)
+    subspace_size = int(original_cols / 2)
+    for input_tensor in inputs:
+      subspaces.append(tf.reshape(input_tensor[:, :subspace_size], [-1]))
+      subspaces.append(tf.reshape(input_tensor[:, subspace_size:], [-1]))
+    n_alphas = len(inputs) * 2
+    subspaces = tf.reshape(tf.stack(subspaces), [n_alphas, -1])
 
-        # create the alpha learnable parameters
-        alphas = tf.Variable(tf.random_normal(
-            [n_alphas, n_alphas]), name='alphas')
+    # create the alpha learnable parameters
+    alphas = tf.Variable(tf.random_normal([n_alphas, n_alphas]), name='alphas')
 
-        out_tensor = tf.matmul(alphas, subspaces)
+    #alphas = tf.constant(5.0, shape =[n_alphas, n_alphas])
+    subspaces = tf.matmul(alphas, subspaces)
 
-        # concatenate subspaces, reshape to size of original input, then stack
-        # such that out_tensor has shape (2,?,original_cols)
-        row = 0
-        lin_comb = []
-        for x in range(0, len(inputs)):
-            lin_comb.append(tf.reshape(
-                out_tensor[row:row + 2, ], [-1, original_cols]))
-            row += 2
-        out_tensor = tf.stack(lin_comb)
-        self.alphas = alphas
-        if set_tensors:
-            self.out_tensor = out_tensor
-        return out_tensor
+    # concatenate subspaces, reshape to size of original input, then stack
+    # such that out_tensor has shape (2,?,original_cols)
+
+    count = 0
+    out_tensor = []
+    tmp_tensor = []
+    for row in range(n_alphas):
+      tmp_tensor.append(tf.reshape(subspaces[row, ], [-1, subspace_size]))
+      count += 1
+      if (count == 2):
+        out_tensor.append(tf.concat(tmp_tensor, 1))
+        tmp_tensor = []
+        count = 0
+
+    out_tensor = tf.stack(out_tensor)
+
+    self.alphas = alphas
+    if set_tensors:
+      self.out_tensor = out_tensor
+    return out_tensor
 
 
 class LayerSplitter(Layer):
-    """
-    Crude way of having AlphaShare output two different output tensors
-    Number of LayerSplitter layers should equal the number of layers inputted into
-    the AlphaShare layer
-    """
+  """
+  Crude way of having AlphaShare output two different output tensors
+  Number of LayerSplitter layers should equal the number of layers inputted into
+  the AlphaShare layer
+  """
 
-    def __init__(self, tower_num, **kwargs):
-        """
-        Parameters
-        ----------
-        tower_num: int
-            corresponds to the order that layers were inputted into
-            AlphaShare layer
-        """
-        self.tower_num = tower_num
-        super(LayerSplitter, self).__init__(**kwargs)
+  def __init__(self, tower_num, **kwargs):
+    """
+    Parameters
+    ----------
+    tower_num: int
+        corresponds to the order that layers were inputted into
+        AlphaShare layer
+    """
+    self.tower_num = tower_num
+    super(LayerSplitter, self).__init__(**kwargs)
 
-    def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
-        inputs = self._get_input_tensors(in_layers)[0]
-        self.out_tensor = inputs[self.tower_num, :]
-        return self.out_tensor
+  def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
+    inputs = self._get_input_tensors(in_layers)[0]
+    self.out_tensor = inputs[self.tower_num, :]
+    return self.out_tensor
 
 
 class SluiceLoss(Layer):
-    """
-    Calculates the loss in a Sluice Network
-    """
+  """
+  Calculates the loss in a Sluice Network
+  """
 
-    def __init__(self, **kwargs):
-        super(SluiceLoss, self).__init__(**kwargs)
+  def __init__(self, **kwargs):
+    super(SluiceLoss, self).__init__(**kwargs)
 
-    def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
-        inputs = self._get_input_tensors(in_layers)
-        temp = []
-        subspaces = []
-        # creates subspaces the same way it was done in AlphaShare
-        for input_tensor in inputs:
-            subspace_size = int(input_tensor.get_shape()[-1].value / 2)
-            subspaces.append(input_tensor[:, :subspace_size])
-            subspaces.append(input_tensor[:, subspace_size:])
-            product = tf.matmul(tf.transpose(subspaces[0]), subspaces[1])
-            # calculate squared Frobenius norm
-            temp.append(tf.reduce_sum(tf.pow(product, 2)))
-        out_tensor = tf.reduce_sum(temp)
-        self.out_tensor = out_tensor
-        return out_tensor
+  def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
+    inputs = self._get_input_tensors(in_layers)
+    temp = []
+    subspaces = []
+    # creates subspaces the same way it was done in AlphaShare
+    for input_tensor in inputs:
+      subspace_size = int(input_tensor.get_shape()[-1].value / 2)
+      subspaces.append(input_tensor[:, :subspace_size])
+      subspaces.append(input_tensor[:, subspace_size:])
+      product = tf.matmul(tf.transpose(subspaces[0]), subspaces[1])
+      # calculate squared Frobenius norm
+      temp.append(tf.reduce_sum(tf.pow(product, 2)))
+    out_tensor = tf.reduce_sum(temp)
+    self.out_tensor = out_tensor
+    return out_tensor
 
 
 class BetaShare(Layer):
+  """
+  Part of a sluice network. Adds beta params to control which layer
+  outputs are used for prediction
+  """
+
+  def __init__(self, **kwargs):
+    super(BetaShare, self).__init__(**kwargs)
+
+  def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     """
-    Part of a sluice network. Adds beta params to control which layer
-    outputs are used for prediction
+    Size of input layers must all be the same
     """
+    inputs = self._get_input_tensors(in_layers)
+    subspaces = []
+    original_cols = int(inputs[0].get_shape()[-1].value)
+    for input_tensor in inputs:
+      subspaces.append(tf.reshape(input_tensor, [-1]))
+    n_betas = len(inputs)
+    subspaces = tf.reshape(tf.stack(subspaces), [n_betas, -1])
 
-    def __init__(self, **kwargs):
-        super(BetaShare, self).__init__(**kwargs)
-
-    def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
-        """
-        Size of input layers must all be the same
-        """
-        inputs = self._get_input_tensors(in_layers)
-        subspaces = []
-        original_cols = int(inputs[0].get_shape()[-1].value)
-        for input_tensor in inputs:
-            subspaces.append(tf.reshape(input_tensor, [-1]))
-        n_betas = len(inputs)
-        subspaces = tf.reshape(tf.stack(subspaces), [n_betas, -1])
-
-        betas = tf.Variable(tf.random_normal([1, n_betas]), name='betas')
-        out_tensor = tf.matmul(betas, subspaces)
-        self.betas = betas
-        self.out_tensor = tf.reshape(out_tensor, [-1, original_cols])
-        return out_tensor
+    betas = tf.Variable(tf.random_normal([1, n_betas]), name='betas')
+    out_tensor = tf.matmul(betas, subspaces)
+    self.betas = betas
+    self.out_tensor = tf.reshape(out_tensor, [-1, original_cols])
+    return out_tensor
 
 
 class Conv1D(Layer):
@@ -326,7 +357,6 @@ class Conv1D(Layer):
 
 
 class Dense(Layer):
-
   def __init__(
       self,
       out_channels,
@@ -444,7 +474,6 @@ class Flatten(Layer):
 
 
 class Reshape(Layer):
-
   def __init__(self, shape, **kwargs):
     self.shape = shape
     super(Reshape, self).__init__(**kwargs)
@@ -459,7 +488,6 @@ class Reshape(Layer):
 
 
 class Squeeze(Layer):
-
   def __init__(self, squeeze_dims, **kwargs):
     self.squeeze_dims = squeeze_dims
     super(Squeeze, self).__init__(**kwargs)
@@ -474,7 +502,6 @@ class Squeeze(Layer):
 
 
 class Transpose(Layer):
-
   def __init__(self, perm, **kwargs):
     super(Transpose, self).__init__(**kwargs)
     self.perm = perm
@@ -490,7 +517,6 @@ class Transpose(Layer):
 
 
 class CombineMeanStd(Layer):
-
   def __init__(self, **kwargs):
     super(CombineMeanStd, self).__init__(**kwargs)
 
@@ -508,7 +534,6 @@ class CombineMeanStd(Layer):
 
 
 class Repeat(Layer):
-
   def __init__(self, n_times, **kwargs):
     self.n_times = n_times
     super(Repeat, self).__init__(**kwargs)
@@ -585,7 +610,6 @@ class GRU(Layer):
 
 
 class TimeSeriesDense(Layer):
-
   def __init__(self, out_channels, **kwargs):
     self.out_channels = out_channels
     super(TimeSeriesDense, self).__init__(**kwargs)
@@ -605,7 +629,6 @@ class TimeSeriesDense(Layer):
 
 
 class Input(Layer):
-
   def __init__(self, shape, dtype=tf.float32, **kwargs):
     self.shape = shape
     self.dtype = dtype
@@ -627,7 +650,7 @@ class Input(Layer):
     return out_tensor
 
   def create_pre_q(self, batch_size):
-    q_shape = (batch_size,) + self.shape[1:]
+    q_shape = (batch_size, ) + self.shape[1:]
     return Input(shape=q_shape, name="%s_pre_q" % self.name, dtype=self.dtype)
 
   def get_pre_q_name(self):
@@ -635,25 +658,21 @@ class Input(Layer):
 
 
 class Feature(Input):
-
   def __init__(self, **kwargs):
     super(Feature, self).__init__(**kwargs)
 
 
 class Label(Input):
-
   def __init__(self, **kwargs):
     super(Label, self).__init__(**kwargs)
 
 
 class Weights(Input):
-
   def __init__(self, **kwargs):
     super(Weights, self).__init__(**kwargs)
 
 
 class L2Loss(Layer):
-
   def __init__(self, **kwargs):
     super(L2Loss, self).__init__(**kwargs)
 
@@ -668,7 +687,6 @@ class L2Loss(Layer):
 
 
 class SoftMax(Layer):
-
   def __init__(self, **kwargs):
     super(SoftMax, self).__init__(**kwargs)
 
@@ -684,7 +702,6 @@ class SoftMax(Layer):
 
 
 class Concat(Layer):
-
   def __init__(self, axis=1, **kwargs):
     self.axis = axis
     super(Concat, self).__init__(**kwargs)
@@ -828,7 +845,6 @@ class InteratomicL2Distances(Layer):
 
 
 class SoftMaxCrossEntropy(Layer):
-
   def __init__(self, **kwargs):
     super(SoftMaxCrossEntropy, self).__init__(**kwargs)
 
@@ -846,7 +862,6 @@ class SoftMaxCrossEntropy(Layer):
 
 
 class ReduceMean(Layer):
-
   def __init__(self, axis=None, **kwargs):
     self.axis = axis
     super(ReduceMean, self).__init__(**kwargs)
@@ -865,7 +880,6 @@ class ReduceMean(Layer):
 
 
 class ToFloat(Layer):
-
   def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     inputs = self._get_input_tensors(in_layers)
     if len(inputs) > 1:
@@ -877,7 +891,6 @@ class ToFloat(Layer):
 
 
 class ReduceSum(Layer):
-
   def __init__(self, axis=None, **kwargs):
     self.axis = axis
     super(ReduceSum, self).__init__(**kwargs)
@@ -896,7 +909,6 @@ class ReduceSum(Layer):
 
 
 class ReduceSquareDifference(Layer):
-
   def __init__(self, axis=None, **kwargs):
     self.axis = axis
     super(ReduceSquareDifference, self).__init__(**kwargs)
@@ -978,7 +990,6 @@ class Conv2D(Layer):
 
 
 class MaxPool(Layer):
-
   def __init__(self,
                ksize=[1, 2, 2, 1],
                strides=[1, 2, 2, 1],
@@ -993,7 +1004,10 @@ class MaxPool(Layer):
     inputs = self._get_input_tensors(in_layers)
     in_tensor = inputs[0]
     out_tensor = tf.nn.max_pool(
-        in_tensor, ksize=self.ksize, strides=self.strides, padding=self.padding)
+        in_tensor,
+        ksize=self.ksize,
+        strides=self.strides,
+        padding=self.padding)
     if set_tensors:
       self.out_tensor = out_tensor
     return out_tensor
@@ -1038,7 +1052,6 @@ class InputFifoQueue(Layer):
 
 
 class GraphConv(Layer):
-
   def __init__(self,
                out_channel,
                min_deg=0,
@@ -1054,7 +1067,8 @@ class GraphConv(Layer):
 
   def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     inputs = self._get_input_tensors(in_layers)
-    # in_layers = [atom_features, deg_slice, membership, deg_adj_list placeholders...]
+    # in_layers = [atom_features, deg_slice, membership, deg_adj_list
+    # placeholders...]
     in_channels = inputs[0].get_shape()[-1].value
 
     # Generate the nb_affine weights and biases
@@ -1153,7 +1167,6 @@ class GraphConv(Layer):
 
 
 class GraphPool(Layer):
-
   def __init__(self, min_degree=0, max_degree=10, **kwargs):
     self.min_degree = min_degree
     self.max_degree = max_degree
@@ -1202,7 +1215,6 @@ class GraphPool(Layer):
 
 
 class GraphGather(Layer):
-
   def __init__(self, batch_size, activation_fn=None, **kwargs):
     self.batch_size = batch_size
     self.activation_fn = activation_fn
@@ -1211,7 +1223,8 @@ class GraphGather(Layer):
   def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     inputs = self._get_input_tensors(in_layers)
 
-    # x = [atom_features, deg_slice, membership, deg_adj_list placeholders...]
+    # x = [atom_features, deg_slice, membership, deg_adj_list
+    # placeholders...]
     atom_features = inputs[0]
 
     # Extract graph topology
@@ -1249,7 +1262,6 @@ class GraphGather(Layer):
 
 
 class BatchNorm(Layer):
-
   def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     inputs = self._get_input_tensors(in_layers)
     parent_tensor = inputs[0]
@@ -1260,7 +1272,6 @@ class BatchNorm(Layer):
 
 
 class BatchNormalization(Layer):
-
   def __init__(self,
                epsilon=1e-5,
                axis=-1,
@@ -1281,7 +1292,7 @@ class BatchNormalization(Layer):
     return weight
 
   def build(self, input_shape):
-    shape = (input_shape[self.axis],)
+    shape = (input_shape[self.axis], )
     self.gamma = self.add_weight(
         shape, initializer=self.gamma_init, name='{}_gamma'.format(self.name))
     self.beta = self.add_weight(
@@ -1304,7 +1315,6 @@ class BatchNormalization(Layer):
 
 
 class WeightedError(Layer):
-
   def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     inputs = self._get_input_tensors(in_layers, True)
     entropy, weights = inputs[0], inputs[1]
@@ -1349,7 +1359,7 @@ class VinaFreeEnergy(Layer):
 
   def nonlinearity(self, c):
     """Computes non-linearity used in Vina."""
-    w = tf.Variable(tf.random_normal((1,), stddev=self.stddev))
+    w = tf.Variable(tf.random_normal((1, ), stddev=self.stddev))
     out_tensor = c / (1 + w * self.Nrot)
     return w, out_tensor
 
@@ -1528,8 +1538,10 @@ class NeighborList(Layer):
 
     # List of length N_atoms, each element of different length uniques_i
     nbrs = self.get_atoms_in_nbrs(coords, cells)
-    padding = tf.fill((self.M_nbrs,), -1)
-    padded_nbrs = [tf.concat([unique_nbrs, padding], 0) for unique_nbrs in nbrs]
+    padding = tf.fill((self.M_nbrs, ), -1)
+    padded_nbrs = [
+        tf.concat([unique_nbrs, padding], 0) for unique_nbrs in nbrs
+    ]
 
     # List of length N_atoms, each element of different length uniques_i
     # List of length N_atoms, each a tensor of shape
@@ -1630,7 +1642,8 @@ class NeighborList(Layer):
     """
     N_atoms, n_cells, ndim, M_nbrs = (self.N_atoms, self.n_cells, self.ndim,
                                       self.M_nbrs)
-    # Tile both cells and coords to form arrays of size (N_atoms*n_cells, ndim)
+    # Tile both cells and coords to form arrays of size (N_atoms*n_cells,
+    # ndim)
     tiled_cells = tf.reshape(
         tf.tile(cells, (1, N_atoms)), (N_atoms * n_cells, ndim))
 
@@ -1665,7 +1678,8 @@ class NeighborList(Layer):
     """
     N_atoms, n_cells, ndim = self.N_atoms, self.n_cells, self.ndim
     n_cells = int(n_cells)
-    # Tile both cells and coords to form arrays of size (N_atoms*n_cells, ndim)
+    # Tile both cells and coords to form arrays of size (N_atoms*n_cells,
+    # ndim)
     tiled_cells = tf.tile(cells, (N_atoms, 1))
 
     # Shape (N_atoms*n_cells, 1) after tile
@@ -1746,7 +1760,6 @@ class NeighborList(Layer):
 
 
 class Dropout(Layer):
-
   def __init__(self, dropout_prob, **kwargs):
     self.dropout_prob = dropout_prob
     super(Dropout, self).__init__(**kwargs)
@@ -1764,9 +1777,9 @@ class Dropout(Layer):
 class WeightDecay(Layer):
   """Apply a weight decay penalty.
 
-  The input should be the loss value.  This layer adds a weight decay penalty to it
-  and outputs the sum.
-  """
+      The input should be the loss value.  This layer adds a weight decay penalty to it
+      and outputs the sum.
+      """
 
   def __init__(self, penalty, penalty_type, **kwargs):
     """Create a weight decay penalty layer.
@@ -1785,15 +1798,14 @@ class WeightDecay(Layer):
   def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
     inputs = self._get_input_tensors(in_layers)
     parent_tensor = inputs[0]
-    out_tensor = parent_tensor + model_ops.weight_decay(self.penalty_type,
-                                                        self.penalty)
+    out_tensor = parent_tensor + model_ops.weight_decay(
+        self.penalty_type, self.penalty)
     if set_tensors:
       self.out_tensor = out_tensor
     return out_tensor
 
 
 class AtomicConvolution(Layer):
-
   def __init__(self,
                atom_types=None,
                radial_params=list(),
@@ -2021,8 +2033,9 @@ class AtomicConvolution(Layer):
     example_tensors = tf.unstack(X, axis=0)
     example_nbrs = tf.unstack(nbr_indices, axis=0)
     all_nbr_coords = []
-    for example, (example_tensor,
-                  example_nbr) in enumerate(zip(example_tensors, example_nbrs)):
+    for example, (
+        example_tensor,
+        example_nbr) in enumerate(zip(example_tensors, example_nbrs)):
       nbr_coords = tf.gather(example_tensor, example_nbr)
       all_nbr_coords.append(nbr_coords)
     neighbors = tf.stack(all_nbr_coords)
