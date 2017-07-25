@@ -183,6 +183,7 @@ class AlphaShare(Layer):
         alphas = tf.Variable(tf.random_normal(
             [n_alphas, n_alphas]), name='alphas')
 
+        #alphas = tf.constant(5.0, shape =[n_alphas, n_alphas])
         subspaces = tf.matmul(alphas, subspaces)
 
         # concatenate subspaces, reshape to size of original input, then stack
@@ -205,6 +206,9 @@ class AlphaShare(Layer):
         self.alphas = alphas
         if set_tensors:
             self.out_tensor = out_tensor
+
+        print('out_tensor')
+        print(self.out_tensor.get_shape().as_list())
         return out_tensor
 
 
@@ -228,7 +232,10 @@ class LayerSplitter(Layer):
 
     def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
         inputs = self._get_input_tensors(in_layers)[0]
+
         self.out_tensor = inputs[self.tower_num, :]
+        print('layer splitter')
+        print(self.out_tensor.get_shape().as_list())
         return self.out_tensor
 
 
@@ -282,6 +289,9 @@ class BetaShare(Layer):
         out_tensor = tf.matmul(betas, subspaces)
         self.betas = betas
         self.out_tensor = tf.reshape(out_tensor, [-1, original_cols])
+
+        print('Beta Share')
+        print(self.out_tensor.get_shape().as_list())
         return out_tensor
 
 
@@ -416,6 +426,9 @@ class Dense(Layer):
         if set_tensors:
             self._record_variable_scope(self._get_scope_name())
             self.out_tensor = out_tensor
+
+        print('Dense')
+        print(self.out_tensor.get_shape().as_list())
         return out_tensor
 
     def shared(self, in_layers):
@@ -1270,6 +1283,9 @@ class GraphGather(Layer):
         out_tensor = mol_features
         if set_tensors:
             self.out_tensor = out_tensor
+
+        print('Graph Gather')
+        print(self.out_tensor.get_shape().as_list())
         return out_tensor
 
 

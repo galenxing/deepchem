@@ -7,6 +7,8 @@ import numpy as np
 import os
 import six
 import tensorflow as tf
+
+from pprint import pprint
 from tensorflow.python.framework.errors_impl import OutOfRangeError
 
 from deepchem.data import NumpyDataset
@@ -18,10 +20,9 @@ from deepchem.utils.evaluate import GeneratorEvaluator
 
 
 class TensorGraph(Model):
-
   def __init__(self,
                tensorboard=False,
-               tensorboard_log_frequency=100,
+               tensorboard_log_frequency=10,
                batch_size=100,
                random_seed=None,
                use_queue=True,
@@ -30,30 +31,30 @@ class TensorGraph(Model):
                learning_rate=0.001,
                **kwargs):
     """
-    TODO(LESWING) allow a model to change its learning rate
-    Parameters
-    ----------
-    tensorboard: bool
-      Should we log to model_dir data for tensorboard?
-    tensorboard_log_frequency: int
-      How many training batches before logging tensorboard?
-    batch_size: int
-      default batch size for training and evaluating
-    use_queue: boolean
-      if True when building we will create a tf.FIFO queue, which will hold
-      all features, weights, and labels.  We will feed the inputs into this
-      queue in batches of self.batch_size in a separate thread from the
-      thread training the model.  You cannot use a queue when
-      batches are not of consistent size
-    mode: str
-      "regression" or "classification".  "classification" models on
-      predict will do an argmax(axis=2) to determine the class of the
-      prediction.
-    graph: tensorflow.Graph
-      the Graph in which to create Tensorflow objects.  If None, a new Graph
-      is created.
-    kwargs
-    """
+        TODO(LESWING) allow a model to change its learning rate
+        Parameters
+        ----------
+        tensorboard: bool
+          Should we log to model_dir data for tensorboard?
+        tensorboard_log_frequency: int
+          How many training batches before logging tensorboard?
+        batch_size: int
+          default batch size for training and evaluating
+        use_queue: boolean
+          if True when building we will create a tf.FIFO queue, which will hold
+          all features, weights, and labels.  We will feed the inputs into this
+          queue in batches of self.batch_size in a separate thread from the
+          thread training the model.  You cannot use a queue when
+          batches are not of consistent size
+        mode: str
+          "regression" or "classification".  "classification" models on
+          predict will do an argmax(axis=2) to determine the class of the
+          prediction.
+        graph: tensorflow.Graph
+          the Graph in which to create Tensorflow objects.  If None, a new Graph
+          is created.
+        kwargs
+        """
 
     # Layer Management
     self.nxgraph = nx.DiGraph()
@@ -62,6 +63,9 @@ class TensorGraph(Model):
     self.labels = list()
     self.outputs = list()
     self.task_weights = list()
+    self.alphas = list()
+    self.betas = list()
+    self.sluiceloss = None
     self.loss = None
     self.built = False
     self.queue_installed = False
@@ -129,7 +133,6 @@ class TensorGraph(Model):
                     feed_dict_generator,
                     max_checkpoints_to_keep=5,
                     checkpoint_interval=1000):
-
     def create_feed_dict():
       if self.use_queue:
         while True:
@@ -156,19 +159,28 @@ class TensorGraph(Model):
               args=(self, feed_dict_generator, self._get_tf("Graph"), sess,
                     coord))
           enqueue_thread.start()
+
         output_tensors = [x.out_tensor for x in self.outputs]
-        fetches = output_tensors + [train_op, self.loss.out_tensor]
+        alphas = [x.alphas for x in self.alphas]
+        betas = [x.betas for x in self.betas]
+
+        fetches = output_tensors + alphas + \
+            betas + [train_op, self.loss.out_tensor]
+
+        #fetches = output_tensors + [train_op, self.loss.out_tensor]
         for feed_dict in create_feed_dict():
           try:
             fetched_values = sess.run(fetches, feed_dict=feed_dict)
+            alphas = fetched_values[2]
+            #betas = fetched_values[4:6]
             loss = fetched_values[-1]
             avg_loss += loss
             n_batches += 1
             self.global_step += 1
             n_samples += 1
             if self.tensorboard and n_samples % self.tensorboard_log_frequency == 0:
-              summary = sess.run(
-                  self._get_tf("summary_op"), feed_dict=feed_dict)
+              sum_ops = self._get_tf("summary_op")
+              summary = sess.run(sum_ops, feed_dict=feed_dict)
               self._log_tensorboard(summary)
           except OutOfRangeError:
             break
@@ -178,25 +190,33 @@ class TensorGraph(Model):
             avg_loss = float(avg_loss) / n_batches
             print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                               avg_loss))
+            print("alphas:")
+            pprint(alphas)
+            print("betas:")
+            pprint(betas)
             avg_loss, n_batches = 0.0, 0.0
         avg_loss = float(avg_loss) / n_batches
         print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                           avg_loss))
+        print("alphas:")
+        pprint(alphas)
+        print("betas:")
+        #pprint(betas)
         saver.save(sess, self.save_file, global_step=self.global_step)
         self.last_checkpoint = saver.last_checkpoints[-1]
-      ############################################################## TIMING
+      # TIMING
       time2 = time.time()
       print("TIMING: model fitting took %0.3f s" % (time2 - time1))
-      ############################################################## TIMING
+      # TIMING
 
   def _log_tensorboard(self, summary):
     """
-    TODO(LESWING) set epoch
-    Parameters
-    ----------
-    Returns
-    -------
-    """
+        TODO(LESWING) set epoch
+        Parameters
+        ----------
+        Returns
+        -------
+        """
     global_step = int(self.global_step)
     writer = self._get_tf("FileWriter")
     writer.reopen()
@@ -239,16 +259,16 @@ class TensorGraph(Model):
 
   def predict_on_generator(self, generator, transformers=[]):
     """Generates output predictions for the input samples,
-      processing the samples in a batched way.
+          processing the samples in a batched way.
 
-    # Arguments
-        x: the input data, as a Numpy array.
-        batch_size: integer.
-        verbose: verbosity mode, 0 or 1.
+        # Arguments
+            x: the input data, as a Numpy array.
+            batch_size: integer.
+            verbose: verbosity mode, 0 or 1.
 
-    # Returns
-        A Numpy array of predictions.
-    """
+        # Returns
+            A Numpy array of predictions.
+        """
     retval = self.predict_proba_on_generator(generator, transformers)
     if self.mode == 'classification':
       retval = np.expand_dims(from_one_hot(retval, axis=2), axis=1)
@@ -256,9 +276,9 @@ class TensorGraph(Model):
 
   def predict_proba_on_generator(self, generator, transformers=[]):
     """
-    Returns:
-      y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
-    """
+        Returns:
+          y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
+        """
     if not self.built:
       self.build()
     with self._get_tf("Graph").as_default():
@@ -282,43 +302,47 @@ class TensorGraph(Model):
 
   def predict_on_batch(self, X, sess=None, transformers=[]):
     """Generates output predictions for the input samples,
-      processing the samples in a batched way.
+          processing the samples in a batched way.
 
-    # Arguments
-        x: the input data, as a Numpy array.
-        batch_size: integer.
-        verbose: verbosity mode, 0 or 1.
+        # Arguments
+            x: the input data, as a Numpy array.
+            batch_size: integer.
+            verbose: verbosity mode, 0 or 1.
 
-    # Returns
-        A Numpy array of predictions.
-    """
+        # Returns
+            A Numpy array of predictions.
+        """
     dataset = NumpyDataset(X=X, y=None)
-    generator = self.default_generator(dataset, predict=True, pad_batches=False)
+    generator = self.default_generator(
+        dataset, predict=True, pad_batches=False)
     return self.predict_on_generator(generator, transformers)
 
   def predict_proba_on_batch(self, X, sess=None, transformers=[]):
     dataset = NumpyDataset(X=X, y=None)
-    generator = self.default_generator(dataset, predict=True, pad_batches=False)
+    generator = self.default_generator(
+        dataset, predict=True, pad_batches=False)
     return self.predict_proba_on_generator(generator, transformers)
 
   def predict(self, dataset, transformers=[], batch_size=None):
     """
-    Uses self to make predictions on provided Dataset object.
+        Uses self to make predictions on provided Dataset object.
 
-    Returns:
-      y_pred: numpy ndarray of shape (n_samples,)
-    """
-    generator = self.default_generator(dataset, predict=True, pad_batches=False)
+        Returns:
+          y_pred: numpy ndarray of shape (n_samples,)
+        """
+    generator = self.default_generator(
+        dataset, predict=True, pad_batches=False)
     return self.predict_on_generator(generator, transformers)
 
   def predict_proba(self, dataset, transformers=[], batch_size=None):
     """
-    TODO: Do transformers even make sense here?
+        TODO: Do transformers even make sense here?
 
-    Returns:
-      y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
-    """
-    generator = self.default_generator(dataset, predict=True, pad_batches=False)
+        Returns:
+          y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
+        """
+    generator = self.default_generator(
+        dataset, predict=True, pad_batches=False)
     return self.predict_proba_on_generator(generator, transformers)
 
   def topsort(self):
@@ -340,14 +364,14 @@ class TensorGraph(Model):
           self.rnn_initial_states += node_layer.rnn_initial_states
           self.rnn_final_states += node_layer.rnn_final_states
           self.rnn_zero_states += node_layer.rnn_zero_states
-          #node_layer.add_sumamry()
-
       self.built = True
 
     for layer in self.layers.values():
       if layer.tensorboard:
         self.tensorboard = True
-    tf.summary.scalar("loss", self.loss.out_tensor)
+      tf.summary.scalar("loss", self.loss.out_tensor)
+    #tf.summary.scalar("sluice loss", self.sluiceloss.out_tensor)
+
     for layer in self.layers.values():
       if layer.tensorboard:
         tf.summary.tensor_summary(layer.name, layer.out_tensor)
@@ -358,7 +382,7 @@ class TensorGraph(Model):
 
   def _install_queue(self):
     """
-    """
+        """
     if not self.use_queue or self.queue_installed:
       for layer in self.features + self.labels + self.task_weights:
         layer.pre_queue = True
@@ -386,16 +410,30 @@ class TensorGraph(Model):
     self._add_layer(layer)
     self.loss = layer
 
+  def set_sluiceloss(self, layer):
+    self._add_layer(layer)
+    self.sluiceloss = layer
+
   def add_output(self, layer):
     self._add_layer(layer)
     self.outputs.append(layer)
 
+  def set_alphas(self, layers):
+    for layer in layers:
+      self._add_layer(layer)
+      self.alphas.append(layer)
+
+  def set_betas(self, layers):
+    for layer in layers:
+      self._add_layer(layer)
+      self.betas.append(layer)
+
   def set_optimizer(self, optimizer):
     """Set the optimizer to use for fitting.
 
-    The argument should be a callable object (most often a TFWrapper) that constructs
-    a Tensorflow optimizer when called.
-    """
+        The argument should be a callable object (most often a TFWrapper) that constructs
+        a Tensorflow optimizer when called.
+        """
     self.optimizer = optimizer
 
   def get_pickling_errors(self, obj, seen=None):
@@ -504,16 +542,16 @@ class TensorGraph(Model):
 
   def _get_tf(self, obj):
     """
-    TODO(LESWING) REALLY NEED TO DOCUMENT THIS
-    Parameters
-    ----------
-    obj
+        TODO(LESWING) REALLY NEED TO DOCUMENT THIS
+        Parameters
+        ----------
+        obj
 
-    Returns
-    -------
-    TensorFlow Object
+        Returns
+        -------
+        TensorFlow Object
 
-    """
+        """
 
     if obj in self.tensor_objects and self.tensor_objects[obj] is not None:
       return self.tensor_objects[obj]
@@ -533,17 +571,17 @@ class TensorGraph(Model):
 
   def _initialize_weights(self, sess, saver):
     """
-    Parameters
-    ----------
-    sess: tf.Session
-      The Session must be open
-    saver: tf.train.Saver
-      A saver object to save/restore checkpoints
+        Parameters
+        ----------
+        sess: tf.Session
+          The Session must be open
+        saver: tf.train.Saver
+          A saver object to save/restore checkpoints
 
-    Returns
-    -------
+        Returns
+        -------
 
-    """
+        """
     if self.last_checkpoint is None:
       sess.run(tf.global_variables_initializer())
       saver.save(sess, self.save_file, global_step=self.global_step)
@@ -573,19 +611,19 @@ class TensorGraph(Model):
 
 def _enqueue_batch(tg, generator, graph, sess, coord):
   """
-  Function to load data into
-  Parameters
-  ----------
-  tg
-  dataset
-  graph
-  sess
-  coord
+    Function to load data into
+    Parameters
+    ----------
+    tg
+    dataset
+    graph
+    sess
+    coord
 
-  Returns
-  -------
+    Returns
+    -------
 
-  """
+    """
   with graph.as_default():
     num_samples = 0
     for feed_dict in generator:
@@ -607,22 +645,22 @@ def _enqueue_batch(tg, generator, graph, sess, coord):
 class TFWrapper(object):
   """This class exists as a workaround for Tensorflow objects not being picklable.
 
-  The job of a TFWrapper is to create Tensorflow objects by passing defined arguments
-  to a constructor.  There are cases where we really want to store Tensorflow objects
-  of various sorts (optimizers, initializers, etc.), but we can't because they cannot
-  be pickled.  So instead we store a TFWrapper that creates the object when needed.
-  """
+    The job of a TFWrapper is to create Tensorflow objects by passing defined arguments
+    to a constructor.  There are cases where we really want to store Tensorflow objects
+    of various sorts (optimizers, initializers, etc.), but we can't because they cannot
+    be pickled.  So instead we store a TFWrapper that creates the object when needed.
+    """
 
   def __init__(self, tf_class, **kwargs):
     """Create a TFWrapper for constructing a Tensorflow object.
 
-    Parameters
-    ----------
-    tf_class: class
-      the type of object to create
-    kwargs:
-      any other arguments will be passed on to the object's constructor
-    """
+        Parameters
+        ----------
+        tf_class: class
+          the type of object to create
+        kwargs:
+          any other arguments will be passed on to the object's constructor
+        """
     self.tf_class = tf_class
     self.kwargs = kwargs
 
