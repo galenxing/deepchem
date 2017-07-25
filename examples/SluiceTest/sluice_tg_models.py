@@ -152,7 +152,7 @@ def two_layer_sluice(batch_size, tasks, minimizer):
 
     as1 = AlphaShare(in_layers=[d1c, d1d])
     as1.set_summary(name = "as1", summary_op= 'histogram')
-    
+
     ls1a = LayerSplitter(in_layers=[as1], tower_num=0)
     ls1b = LayerSplitter(in_layers=[as1], tower_num=1)
 
@@ -199,12 +199,12 @@ def two_layer_sluice(batch_size, tasks, minimizer):
     entropy = Concat(in_layers=costs)
     task_weights = Weights(shape=(None, len(tasks)))
     total_loss = WeightedError(in_layers=[entropy, task_weights])
-
+    total_loss.set_summary(name ='total_loss', summary_op = 'scalar')
     minimizer = Constant(minimizer)
     s_cost = Multiply(in_layers =[minimizer, s_cost])
 
     new_loss = Add(in_layers=[total_loss, s_cost])
-
+    new_loss.set_summary(name= "loss", summary_op='scalar')
     model.set_loss(new_loss)
 
     def feed_dict_generator(dataset, batch_size, epochs=1):

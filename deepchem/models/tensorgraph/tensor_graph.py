@@ -63,8 +63,6 @@ class TensorGraph(Model):
     self.labels = list()
     self.outputs = list()
     self.task_weights = list()
-    self.alphas = list()
-    self.betas = list()
     self.loss = None
     self.built = False
     self.queue_installed = False
@@ -160,16 +158,13 @@ class TensorGraph(Model):
           enqueue_thread.start()
 
         output_tensors = [x.out_tensor for x in self.outputs]
-        alphas = [x.alphas for x in self.alphas]
-        betas = [x.betas for x in self.betas]
+       
 
-        fetches = output_tensors + alphas + \
-            betas + [train_op, self.loss.out_tensor]
+
+        fetches = output_tensors + [train_op, self.loss.out_tensor]
         for feed_dict in create_feed_dict():
           try:
             fetched_values = sess.run(fetches, feed_dict=feed_dict)
-            alphas = fetched_values[2:4]
-            betas = fetched_values[4:6]
             loss = fetched_values[-1]
             avg_loss += loss
             n_batches += 1
@@ -187,18 +182,10 @@ class TensorGraph(Model):
             avg_loss = float(avg_loss) / n_batches
             print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                               avg_loss))
-            print("alphas:")
-            pprint(alphas)
-            print("betas:")
-            pprint(betas)
             avg_loss, n_batches = 0.0, 0.0
         avg_loss = float(avg_loss) / n_batches
         print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                           avg_loss))
-        print("alphas:")
-        pprint(alphas)
-        print("betas:")
-        pprint(betas)
         saver.save(sess, self.save_file, global_step=self.global_step)
         self.last_checkpoint = saver.last_checkpoints[-1]
       # TIMING
@@ -361,7 +348,7 @@ class TensorGraph(Model):
           self.rnn_initial_states += node_layer.rnn_initial_states
           self.rnn_final_states += node_layer.rnn_final_states
           self.rnn_zero_states += node_layer.rnn_zero_states
-          node_layer.add_summary()
+          node_layer.add_summary_to_tg()
       self.built = True
 
     for layer in self.layers.values():
@@ -410,16 +397,7 @@ class TensorGraph(Model):
     self._add_layer(layer)
     self.outputs.append(layer)
 
-  def set_alphas(self, layers):
-    for layer in layers:
-      self._add_layer(layer)
-      self.alphas.append(layer)
-
-  def set_betas(self, layers):
-    for layer in layers:
-      self._add_layer(layer)
-      self.betas.append(layer)
-
+  
   def set_optimizer(self, optimizer):
     """Set the optimizer to use for fitting.
 
