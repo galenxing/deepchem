@@ -49,17 +49,10 @@ class Layer(object):
     def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
         raise NotImplementedError("Subclasses must implement for themselves")
 
-    """
-  def add_summary(self, in_layers, summary_op, name,  **kwargs):
-    if summary_op == 'tensor_summary':
-        tf.summary.tensor_summary()
-    elif summary_op == 'scalar':
-        tf.summary.scalar()
-    elif summary op == 'histogram':
-        tf.summary.histogram()
-    elif summary_op == 'image':
-        tf.summary.image()
-"""
+    
+    def set_summary(self, in_layers):
+        self.summary = True
+
 
     def shared(self, in_layers):
         """
