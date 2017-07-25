@@ -30,6 +30,7 @@ class Layer(object):
     self.rnn_initial_states = []
     self.rnn_final_states = []
     self.rnn_zero_states = []
+    self.tb_input = None
 
   def _get_layer_number(self):
     class_name = self.__class__.__name__
@@ -94,7 +95,6 @@ class Layer(object):
       if any(s != shapes[0] for s in shapes[1:]):
         # Reshape everything to match the input with the most
         # dimensions.
-
         shape = shapes[0]
         for s in shapes:
           if len(s) > len(shape):
@@ -118,13 +118,15 @@ class Layer(object):
   def add_summary(self):
     if self.tensorboard == False:
       return
+    if self.tb_input == None:
+      self.tb_input = self.out_tensor
     if self.summary_op == "tensor_summary":
-      tf.summary.tensor_summary(self.name, self.out_tensor,
+      tf.summary.tensor_summary(self.name, self.tb_input,
                                 self.summary_description, self.collections)
     elif self.summary_op == 'scalar':
-      tf.summary.scalar(self.name, self.out_tensor, self.collections)
+      tf.summary.scalar(self.name, self.tb_input, self.collections)
     elif self.summary_op == 'histogram':
-      tf.summary.histogram(self.name, self.values, self.collections)
+      tf.summary.histogram(self.name, self.tb_input, self.collections)
 
   def set_summary(self,
                   summary_op,
@@ -136,7 +138,7 @@ class Layer(object):
       raise ValueError("Invalid summary_op arg")
     if self.name == None and name == None:
       raise ValueError("Name not previously set. Name param is required")
-
+    self.summary_op = summary_op
     self.name = name
     self.summary_description = summary_description
     self.collections = collections
@@ -220,6 +222,19 @@ class AlphaShare(Layer):
     if set_tensors:
       self.out_tensor = out_tensor
     return out_tensor
+
+  def add_summary(self):
+    if self.tensorboard == False:
+      return
+    if self.tb_input == None:
+      self.tb_input = self.out_tensor
+    if self.summary_op == "tensor_summary":
+      tf.summary.tensor_summary(self.name, self.alphas,
+                                self.summary_description, self.collections)
+    elif self.summary_op == 'scalar':
+      tf.summary.scalar(self.name, self.tb_input, self.collections)
+    elif self.summary_op == 'histogram':
+      tf.summary.histogram(self.name, self.tb_input, self.collections)
 
 
 class LayerSplitter(Layer):

@@ -367,7 +367,7 @@ class TensorGraph(Model):
     for layer in self.layers.values():
       if layer.tensorboard:
         self.tensorboard = True
-    tf.summary.scalar("loss", self.loss.out_tensor)
+    #tf.summary.scalar("loss", self.loss.out_tensor)
     for layer in self.layers.values():
       if layer.tensorboard:
         tf.summary.tensor_summary(layer.name, layer.out_tensor)

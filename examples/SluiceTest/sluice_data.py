@@ -18,32 +18,30 @@ func = np.vectorize(func)
 def load_sluice():
     sluice_tasks = ['func1', 'func2']
 
-    X = np.random.rand(10000, 1)
-    y1 = np.copy(X)
-    y2 = np.copy(X)
+    X_train = np.random.randint(10, size=(8000, 1))
+    X_test = np.random.randint(0, high=10, size=(1000, 1))
+    X_valid = np.random.randint(0, high=10, size=(1000, 1))
 
-    y1 = func(y1, 78)
-    y2 = func(y2, 53)
-    pprint(X[:20])
-    pprint(y1[:20])
-    pprint(y2[:20])
+    datasets = [X_train, X_test, X_valid]
 
-    y = np.concatenate((y1, y2), axis=1)
+    task1 = []
+    task2 = []
+    for dataset in datasets:
+        y1 = y2 = np.copy(dataset)
+        task1.append(func(y1, 10))
+        task2.append(func(y2, 12))
 
-    print(X[:20])
-    #temp_X = np.zeros((1000, 10))
-    for row, value in enumerate(X):
-        break
-        temp_X[row, X[row, 0]] = 1
+    y = []
+    for count, task in enumerate(task1):
+        y.append(np.concatenate((task1[count], task2[count]), axis =1))
 
-    #X = temp_X
-    X_train = X[:8000]
-    X_valid = X[8000:9000]
-    X_test = X[9000:10000]
+    y_train = y[0]
+    y_valid = y[1]
+    y_test = y[2]
 
-    y_train = y[:8000]
-    y_valid = y[8000:9000]
-    y_test = y[9000:10000]
+    print(len(y_train))
+    print(len(y_valid))
+    print(len(y_test))
 
     train = dc.data.NumpyDataset(X=X_train, y=y_train, n_tasks=2)
     valid = dc.data.NumpyDataset(X=X_valid, y=y_valid, n_tasks=2)

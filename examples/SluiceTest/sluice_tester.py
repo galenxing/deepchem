@@ -41,7 +41,7 @@ metric = dc.metrics.Metric(
 batch_size = 100
 
 model, generator, labels, task_weights = graph_conv_model(
-    batch_size, sluice_tasks, minimizer = 0.05)
+    batch_size, sluice_tasks, minimizer = 0.5)
 
 print('labels')
 print(labels)
