@@ -124,7 +124,6 @@ class Layer(object):
       tf.summary.tensor_summary(self.name, self.tb_input,
                                 self.summary_description, self.collections)
     elif self.summary_op == 'scalar':
-      print('is this ever run?')
       tf.summary.scalar(self.name, self.tb_input, self.collections)
     elif self.summary_op == 'histogram':
       tf.summary.histogram(self.name, self.tb_input, self.collections)
@@ -144,39 +143,6 @@ class Layer(object):
     self.summary_description = summary_description
     self.collections = collections
     self.tensorboard = True
-
-
-"""
- def set_summary(self,
-                  summary_op,
-                  name=None,
-                  summary_description=None,
-                  collections=None):
-
-    if self.tb_input == None:
-      self.tb_input = self.out_tensor
-
-    self.summary_op = summary_op
-    self.name = name
-    self.summary_description = summary_description
-    self.collections = collections
-    self.tensorboard = True
-
-    if self.summary_op == "tensor_summary":
-      tf.summary.tensor_summary(self.name, self.tb_input,
-                                self.summary_description, self.collections)
-    elif self.summary_op == 'scalar':
-      tf.summary.scalar(self.name, self.tb_input, self.collections)
-    elif self.summary_op == 'histogram':
-      tf.summary.histogram(self.name, self.tb_input, self.collections)
-"""
-"""  
-    supported_ops = {'tensor_summary', 'scalar', 'histogram'}
-    if summary_op not in supported_ops:
-      raise ValueError("Invalid summary_op arg")
-    if self.name == None and name == None:
-      raise ValueError("Name not previously set. Name param is required")
-"""
 
 
 class TensorWrapper(Layer):

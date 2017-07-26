@@ -10,7 +10,7 @@ import six
 
 from deepchem.models.tensorgraph import TensorGraph
 from deepchem.feat.mol_graphs import ConvMol
-from deepchem.models.tensorgraph.layers import Input, GraphConv, Add, SluiceLoss, BatchNorm, GraphPool, Dense, GraphGather, BetaShare,  LayerSplitter, SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature, AlphaShare
+from deepchem.models.tensorgraph.layers import Input, GraphConv, Add, SluiceLoss, BatchNorm, GraphPool, Dense, GraphGather, BetaShare, LayerSplitter, SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature, AlphaShare
 
 np.random.seed(123)
 import tensorflow as tf
@@ -34,25 +34,25 @@ print("test dataset shape")
 print(test_dataset.get_shape)
 
 # Fit models
-metric = dc.metrics.Metric(
-    dc.metrics.r2_score, np.mean, mode="classification")
+metric = dc.metrics.Metric(dc.metrics.r2_score, np.mean, mode="classification")
 
 # Batch size of models
 batch_size = 100
 
 model, generator, labels, task_weights = graph_conv_model(
-    batch_size, sluice_tasks, minimizer = 0.5)
+    batch_size, sluice_tasks, minimizer=1)
 
 print('labels')
 print(labels)
 
-model.fit_generator(generator(train_dataset, batch_size,
-                              epochs=100), checkpoint_interval=200)
+model.fit_generator(
+    generator(train_dataset, batch_size, epochs=100), checkpoint_interval=200)
 
 print("Evaluating model")
 train_scores = model.evaluate_generator(
     generator(train_dataset, batch_size), [metric],
-    labels=labels, weights=[task_weights])
+    labels=labels,
+    weights=[task_weights])
 valid_scores = model.evaluate_generator(
     generator(valid_dataset, batch_size), [metric],
     labels=labels,
