@@ -19,16 +19,9 @@ def load_sluice():
     sluice_tasks = ['func1', 'func2']
 
     
-    X_train = np.random.randint(2000, size=(80000, 1))
-    X_test = np.random.randint(2000, high=3000, size=(10000, 1))
-    X_valid = np.random.randint(1000, high=2000, size=(10000, 1))
-    """
-
-    X_train = np.random.randint(8, size=(80000, 1))
-    X_test = np.random.randint(0, high=8, size=(10000, 1))
-    X_valid = np.random.randint(0, high=8, size=(10000, 1))
-    """
-
+    X_train = np.random.randint(100, size=(80000, 1))
+    X_test = np.random.randint(100, high=200, size=(10000, 1))
+    X_valid = np.random.randint(100, high=300, size=(10000, 1))
     datasets = [X_train, X_test, X_valid]
 
     task1 = []
@@ -50,6 +43,10 @@ def load_sluice():
     print(len(y_train))
     print(len(y_valid))
     print(len(y_test))
+
+    print(np.ptp(y_train))
+    print(np.ptp(y_test))
+    print(np.ptp(y_valid))
 
     train = dc.data.NumpyDataset(X=X_train, y=y_train, n_tasks=2)
     valid = dc.data.NumpyDataset(X=X_valid, y=y_valid, n_tasks=2)

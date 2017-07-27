@@ -484,7 +484,7 @@ class TensorGraph(Model):
       raise ValueError
     n_tasks = len(self.outputs)
     n_classes = self.outputs[0].out_tensor.get_shape()[-1].value
-
+  
     evaluator = GeneratorEvaluator(
         self,
         feed_dict_generator,

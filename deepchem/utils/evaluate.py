@@ -239,7 +239,7 @@ class GeneratorEvaluator(object):
         all_task_scores[metric.name] = computed_metrics
       else:
         multitask_scores[metric.name] = metric.compute_metric(
-            y, y_pred, w, per_task_metrics=False)
+            y, y_pred, w, per_task_metrics=False, n_classes = self.n_classes)
 
     if not per_task_metrics:
       return multitask_scores
