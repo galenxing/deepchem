@@ -11,21 +11,29 @@ import os
 import numpy as np
 import shutil
 import deepchem as dc
-func = lambda x, k: round((x + k) % 5)
+func = lambda x, k: round((x + k))
 func = np.vectorize(func)
 
 
 def load_sluice():
     sluice_tasks = ['func1', 'func2']
 
-    X_train = np.random.randint(20, size=(8000, 1))
-    X_test = np.random.randint(10, high=20, size=(1000, 1))
-    X_valid = np.random.randint(20, high=30, size=(1000, 1))
+    
+    X_train = np.random.randint(2000, size=(80000, 1))
+    X_test = np.random.randint(2000, high=3000, size=(10000, 1))
+    X_valid = np.random.randint(1000, high=2000, size=(10000, 1))
+    """
+
+    X_train = np.random.randint(8, size=(80000, 1))
+    X_test = np.random.randint(0, high=8, size=(10000, 1))
+    X_valid = np.random.randint(0, high=8, size=(10000, 1))
+    """
 
     datasets = [X_train, X_test, X_valid]
 
     task1 = []
     task2 = []
+
     for dataset in datasets:
         y1 = y2 = np.copy(dataset)
         task1.append(func(y1, 10))
@@ -36,8 +44,8 @@ def load_sluice():
         y.append(np.concatenate((task1[count], task2[count]), axis =1))
 
     y_train = y[0]
-    y_valid = y[1]
-    y_test = y[2]
+    y_valid = y[2]
+    y_test = y[1]
 
     print(len(y_train))
     print(len(y_valid))

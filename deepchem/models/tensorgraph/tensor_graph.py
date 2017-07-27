@@ -22,7 +22,7 @@ from deepchem.utils.evaluate import GeneratorEvaluator
 class TensorGraph(Model):
   def __init__(self,
                tensorboard=False,
-               tensorboard_log_frequency=10,
+               tensorboard_log_frequency=100,
                batch_size=100,
                random_seed=None,
                use_queue=True,
@@ -63,9 +63,6 @@ class TensorGraph(Model):
     self.labels = list()
     self.outputs = list()
     self.task_weights = list()
-    self.alphas = list()
-    self.betas = list()
-    self.sluiceloss = None
     self.loss = None
     self.built = False
     self.queue_installed = False
@@ -161,26 +158,20 @@ class TensorGraph(Model):
           enqueue_thread.start()
 
         output_tensors = [x.out_tensor for x in self.outputs]
-        alphas = [x.alphas for x in self.alphas]
-        betas = [x.betas for x in self.betas]
 
-        fetches = output_tensors + alphas + \
-            betas + [train_op, self.loss.out_tensor]
-
-        #fetches = output_tensors + [train_op, self.loss.out_tensor]
+        fetches = output_tensors + [train_op, self.loss.out_tensor]
         for feed_dict in create_feed_dict():
           try:
             fetched_values = sess.run(fetches, feed_dict=feed_dict)
-            alphas = fetched_values[2]
-            #betas = fetched_values[4:6]
+
             loss = fetched_values[-1]
             avg_loss += loss
             n_batches += 1
             self.global_step += 1
             n_samples += 1
             if self.tensorboard and n_samples % self.tensorboard_log_frequency == 0:
-              sum_ops = self._get_tf("summary_op")
-              summary = sess.run(sum_ops, feed_dict=feed_dict)
+              summary = sess.run(
+                  self._get_tf("summary_op"), feed_dict=feed_dict)
               self._log_tensorboard(summary)
           except OutOfRangeError:
             break
@@ -190,18 +181,10 @@ class TensorGraph(Model):
             avg_loss = float(avg_loss) / n_batches
             print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                               avg_loss))
-            print("alphas:")
-            pprint(alphas)
-            print("betas:")
-            pprint(betas)
             avg_loss, n_batches = 0.0, 0.0
         avg_loss = float(avg_loss) / n_batches
         print('Ending global_step %d: Average loss %g' % (self.global_step,
                                                           avg_loss))
-        print("alphas:")
-        pprint(alphas)
-        print("betas:")
-        #pprint(betas)
         saver.save(sess, self.save_file, global_step=self.global_step)
         self.last_checkpoint = saver.last_checkpoints[-1]
       # TIMING
@@ -336,11 +319,11 @@ class TensorGraph(Model):
 
   def predict_proba(self, dataset, transformers=[], batch_size=None):
     """
-        TODO: Do transformers even make sense here?
+    TODO: Do transformers even make sense here?
 
-        Returns:
-          y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
-        """
+    Returns:
+      y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
+    """
     generator = self.default_generator(
         dataset, predict=True, pad_batches=False)
     return self.predict_proba_on_generator(generator, transformers)
@@ -364,14 +347,13 @@ class TensorGraph(Model):
           self.rnn_initial_states += node_layer.rnn_initial_states
           self.rnn_final_states += node_layer.rnn_final_states
           self.rnn_zero_states += node_layer.rnn_zero_states
+          node_layer.add_summary_to_tg()
       self.built = True
 
     for layer in self.layers.values():
       if layer.tensorboard:
         self.tensorboard = True
-      tf.summary.scalar("loss", self.loss.out_tensor)
-    #tf.summary.scalar("sluice loss", self.sluiceloss.out_tensor)
-
+    tf.summary.scalar("loss", self.loss.out_tensor)
     for layer in self.layers.values():
       if layer.tensorboard:
         tf.summary.tensor_summary(layer.name, layer.out_tensor)
@@ -410,24 +392,11 @@ class TensorGraph(Model):
     self._add_layer(layer)
     self.loss = layer
 
-  def set_sluiceloss(self, layer):
-    self._add_layer(layer)
-    self.sluiceloss = layer
-
   def add_output(self, layer):
     self._add_layer(layer)
     self.outputs.append(layer)
 
-  def set_alphas(self, layers):
-    for layer in layers:
-      self._add_layer(layer)
-      self.alphas.append(layer)
-
-  def set_betas(self, layers):
-    for layer in layers:
-      self._add_layer(layer)
-      self.betas.append(layer)
-
+  
   def set_optimizer(self, optimizer):
     """Set the optimizer to use for fitting.
 
@@ -515,6 +484,7 @@ class TensorGraph(Model):
       raise ValueError
     n_tasks = len(self.outputs)
     n_classes = self.outputs[0].out_tensor.get_shape()[-1].value
+
     evaluator = GeneratorEvaluator(
         self,
         feed_dict_generator,

@@ -19,9 +19,9 @@ tf.set_random_seed(123)
 import deepchem as dc
 from sluice_data import load_sluice
 
-from sluice_tg_models import one_layer_sluice, two_layer_sluice, hard_param_mt, three_layer_dense, two_layer_dense, five_layer_dense, three_layer_sluice
+from sluice_tg_models import three_layer_sluice_regression, hard_param_mt_regression, three_layer_dense_regression
 
-graph_conv_model = three_layer_sluice
+graph_conv_model = hard_param_mt_regression
 
 # Load Tox21 dataset
 sluice_tasks, sluice_datasets, transformers = load_sluice()
@@ -35,19 +35,19 @@ print(test_dataset.get_shape)
 
 # Fit models
 metric = dc.metrics.Metric(
-    dc.metrics.r2_score, np.mean, mode="classification")
+    dc.metrics.r2_score, np.mean, mode="regression")
 
 # Batch size of models
 batch_size = 100
 
 model, generator, labels, task_weights = graph_conv_model(
-    batch_size, sluice_tasks, minimizer = 1)
+    batch_size, sluice_tasks)
 
 print('labels')
 print(labels)
 
 model.fit_generator(generator(train_dataset, batch_size,
-                              epochs=300), checkpoint_interval=200)
+                              epochs=10), checkpoint_interval=200)
 
 print("Evaluating model")
 train_scores = model.evaluate_generator(
