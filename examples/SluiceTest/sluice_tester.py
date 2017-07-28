@@ -19,9 +19,9 @@ tf.set_random_seed(123)
 import deepchem as dc
 from sluice_data import load_sluice
 
-from sluice_tg_models import three_layer_sluice_regression, hard_param_mt_regression, three_layer_dense
+from sluice_tg_models import three_layer_sluice, hard_param_mt_regression, three_layer_dense
 
-graph_conv_model = three_layer_dense
+graph_conv_model = three_layer_sluice
 # Load Tox21 dataset
 sluice_tasks, sluice_datasets, transformers = load_sluice()
 train_dataset, valid_dataset, test_dataset = sluice_datasets
@@ -33,7 +33,7 @@ print("test dataset shape")
 print(test_dataset.get_shape)
     
 
-mode = "regression"
+mode = "classification"
 
 # Fit models
 metric = dc.metrics.Metric(

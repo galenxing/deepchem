@@ -11,7 +11,7 @@ import os
 import numpy as np
 import shutil
 import deepchem as dc
-func = lambda x, k: round((x + k))
+func = lambda x, k: round((x + k)%5)
 func = np.vectorize(func)
 
 

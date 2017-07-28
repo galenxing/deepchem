@@ -102,7 +102,7 @@ def three_layer_dense(batch_size, tasks, mode = "classification"):
                 yield d
     return model, feed_dict_generator, labels, task_weights
 
-def hard_param_mt_regression(batch_size, tasks):
+def hard_param_mt_regression(batch_size, tasks, mode = "classification"):
     model = TensorGraph(model_dir='graphconv/hard_param_mt' + str(current_milli_time()),
                         batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
@@ -154,7 +154,7 @@ def hard_param_mt_regression(batch_size, tasks):
     return model, feed_dict_generator, labels, task_weights
 
 
-def three_layer_sluice_regression(batch_size, tasks, minimizer=1):
+def three_layer_sluice(batch_size, tasks, minimizer=1, mode = "classification"):
     model = TensorGraph(model_dir='graphconv/three_layer_sluice' + str(minimizer)+str(current_milli_time()),
                         batch_size=batch_size, use_queue=False, tensorboard=True)
     sluice_cost = []
@@ -197,21 +197,43 @@ def three_layer_sluice_regression(batch_size, tasks, minimizer=1):
     costs = []
     labels = []
 
-    for task in tasks:
-        if count < len(tasks) / 2:
-            regression = Dense(
-                out_channels=1, activation_fn=None, in_layers=[ls3a])
-        else:
-            regression = Dense(
-                out_channels=1, activation_fn=None, in_layers=[ls3b])
+    if mode == 'regression':
+        for task in tasks:
+            if count < len(tasks) / 2:
+                regression = Dense(
+                    out_channels=1, activation_fn=None, in_layers=[ls3a])
+            else:
+                regression = Dense(
+                    out_channels=1, activation_fn=None, in_layers=[ls3b])
 
-        model.add_output(regression)
-        count += 1
+            model.add_output(regression)
+            count += 1
 
-        label = Label(shape= (None, 1))
-        labels.append(label)
-        cost = L2Loss(in_layers= [label,regression])
-        costs.append(cost)
+            label = Label(shape= (None, 1))
+            labels.append(label)
+            cost = L2Loss(in_layers= [label,regression])
+            costs.append(cost)
+
+    elif mode == 'classification':
+         for task in tasks:
+            if count < len(tasks) / 2:
+                classification = Dense(
+                    out_channels=5, activation_fn=None, in_layers=[ls3a])
+            else:
+                classification = Dense(
+                    out_channels=5, activation_fn=None, in_layers=[ls3b])
+
+            count += 1
+            softmax = SoftMax(in_layers = [classification])
+            model.add_output(softmax)
+
+            label = Label(shape= (None, 5))
+            labels.append(label)
+
+            cost = SoftMaxCrossEntropy(in_layers= [label,classification])
+            costs.append(cost)
+
+
 
     s_cost = SluiceLoss(in_layers=sluice_cost)
     entropy = Concat(in_layers=costs, axis = -1)
@@ -233,7 +255,10 @@ def three_layer_sluice_regression(batch_size, tasks, minimizer=1):
                 d[X1] = X_b
                 d[X2] = X_b
                 for index, label in enumerate(labels):
-                    d[label] = np.expand_dims(y_b[:, index], -1)
+                    if mode == 'regression':
+                        d[label] = np.expand_dims(y_b[:, index], -1)
+                    elif mode == 'classification':
+                        d[label] = to_one_hot(y_b[:, index], n_classes = 5)
                 d[task_weights] = w_b
                 yield d
     return model, feed_dict_generator, labels, task_weights
