@@ -20,6 +20,7 @@ from deepchem.utils.evaluate import GeneratorEvaluator
 
 
 class TensorGraph(Model):
+
   def __init__(self,
                tensorboard=False,
                tensorboard_log_frequency=100,
@@ -130,6 +131,7 @@ class TensorGraph(Model):
                     feed_dict_generator,
                     max_checkpoints_to_keep=5,
                     checkpoint_interval=1000):
+
     def create_feed_dict():
       if self.use_queue:
         while True:
@@ -158,8 +160,6 @@ class TensorGraph(Model):
           enqueue_thread.start()
 
         output_tensors = [x.out_tensor for x in self.outputs]
-       
-
 
         fetches = output_tensors + [train_op, self.loss.out_tensor]
         for feed_dict in create_feed_dict():
@@ -297,14 +297,12 @@ class TensorGraph(Model):
             A Numpy array of predictions.
         """
     dataset = NumpyDataset(X=X, y=None)
-    generator = self.default_generator(
-        dataset, predict=True, pad_batches=False)
+    generator = self.default_generator(dataset, predict=True, pad_batches=False)
     return self.predict_on_generator(generator, transformers)
 
   def predict_proba_on_batch(self, X, sess=None, transformers=[]):
     dataset = NumpyDataset(X=X, y=None)
-    generator = self.default_generator(
-        dataset, predict=True, pad_batches=False)
+    generator = self.default_generator(dataset, predict=True, pad_batches=False)
     return self.predict_proba_on_generator(generator, transformers)
 
   def predict(self, dataset, transformers=[], batch_size=None):
@@ -314,8 +312,7 @@ class TensorGraph(Model):
         Returns:
           y_pred: numpy ndarray of shape (n_samples,)
         """
-    generator = self.default_generator(
-        dataset, predict=True, pad_batches=False)
+    generator = self.default_generator(dataset, predict=True, pad_batches=False)
     return self.predict_on_generator(generator, transformers)
 
   def predict_proba(self, dataset, transformers=[], batch_size=None):
@@ -325,8 +322,7 @@ class TensorGraph(Model):
     Returns:
       y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
     """
-    generator = self.default_generator(
-        dataset, predict=True, pad_batches=False)
+    generator = self.default_generator(dataset, predict=True, pad_batches=False)
     return self.predict_proba_on_generator(generator, transformers)
 
   def topsort(self):
@@ -354,7 +350,7 @@ class TensorGraph(Model):
     for layer in self.layers.values():
       if layer.tensorboard:
         self.tensorboard = True
-    #tf.summary.scalar("loss", self.loss.out_tensor)
+    tf.summary.scalar("loss", self.loss.out_tensor)
     for layer in self.layers.values():
       if layer.tensorboard:
         tf.summary.tensor_summary(layer.name, layer.out_tensor)
@@ -397,7 +393,6 @@ class TensorGraph(Model):
     self._add_layer(layer)
     self.outputs.append(layer)
 
-  
   def set_optimizer(self, optimizer):
     """Set the optimizer to use for fitting.
 
