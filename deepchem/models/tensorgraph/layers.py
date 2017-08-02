@@ -141,7 +141,6 @@ class Layer(object):
     self.summary_description = summary_description
     self.collections = collections
     self.tensorboard = True
-    
 
   def add_summary_to_tg(self):
     if self.tensorboard == False:
@@ -155,9 +154,6 @@ class Layer(object):
       tf.summary.scalar(self.name, self.tb_input, self.collections)
     elif self.summary_op == 'histogram':
       tf.summary.histogram(self.name, self.tb_input, self.collections)
-
-  
-
 
 
 class TensorWrapper(Layer):
