@@ -181,7 +181,7 @@ class Metric(object):
                      y_true,
                      y_pred,
                      w=None,
-                     n_classes=2,
+                     n_classes=20,
                      filter_nans=True,
                      per_task_metrics=False):
     """Compute a performance metric for each task.
@@ -210,7 +210,12 @@ class Metric(object):
     else:
       n_samples, n_tasks = y_true.shape[0], 1
     if self.mode == "classification":
+      print('n_classes')
+      print(n_classes)
+      
+
       y_pred = np.reshape(y_pred, (n_samples, n_tasks, n_classes))
+      
     else:
       y_pred = np.reshape(y_pred, (n_samples, n_tasks))
     y_true = np.reshape(y_true, (n_samples, n_tasks))
@@ -285,7 +290,9 @@ class Metric(object):
         y_true = y_true.astype(int)
         # Reshape to handle 1-d edge cases
         y_pred = np.reshape(y_pred, (n_samples, n_classes))
+        y_pred = np.reshape(y_pred, (n_samples, n_classes))
         y_pred = from_one_hot(y_pred)
+
     else:
       y_pred = np.reshape(y_pred, (n_samples,))
 

@@ -14,7 +14,7 @@ np.random.seed(123)
 
 # Load hiv dataset
 n_features = 1024
-hiv_tasks, hiv_datasets, transformers = load_hiv()
+hiv_tasks, hiv_datasets, transformers = load_hiv(featurizer='GraphConv')
 train_dataset, valid_dataset, test_dataset = hiv_datasets
 
 # Fit models

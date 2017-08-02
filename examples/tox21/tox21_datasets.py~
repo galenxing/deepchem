@@ -16,10 +16,10 @@ def load_tox21(featurizer='ECFP', split='index'):
   print("About to featurize Tox21 dataset.")
   current_dir = os.path.dirname(os.path.realpath(__file__))
   dataset_file = os.path.join(
-      current_dir, "../../datasets/tox21_hiv.csv.gz")
+      current_dir, "../../datasets/tox21.csv.gz")
   tox21_tasks = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase', 'NR-ER',
                  'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
-                 'SR-HSE', 'SR-MMP', 'SR-p53', 'HIV_active']
+                 'SR-HSE', 'SR-MMP', 'SR-p53']
   if featurizer == 'ECFP':
     featurizer_func = dc.feat.CircularFingerprint(size=1024)
   elif featurizer == 'GraphConv':

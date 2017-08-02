@@ -1,13 +1,13 @@
 """
 Script that trains graph-conv models on Tox21 dataset.
 """
-from __future__ import division
 from __future__ import print_function
+from __future__ import division
 from __future__ import unicode_literals
 
 import numpy as np
-<<<<<<< HEAD
 import six
+import sys
 
 from deepchem.models.tensorgraph import TensorGraph
 from deepchem.metrics import to_one_hot
@@ -15,20 +15,19 @@ from deepchem.metrics import to_one_hot
 from deepchem.feat.mol_graphs import ConvMol
 from deepchem.models.tensorgraph.layers import Input, GraphConv, BatchNorm, GraphPool, Dense, GraphGather, \
   SoftMax, SoftMaxCrossEntropy, Concat, WeightedError, Label, Weights, Feature
-=======
->>>>>>> e8593fc7fa03ffa0289248c6c24d6643cb5df739
 
 np.random.seed(123)
 import tensorflow as tf
 
 tf.set_random_seed(123)
 import deepchem as dc
-from tox21_datasets import load_tox21
-from deepchem.models.tensorgraph.models.graph_models import GraphConvTensorGraph
+from datasets import load_tox21
+from record_info import record_info
 
 model_dir = "/tmp/graph_conv"
 
-<<<<<<< HEAD
+
+
 
 def graph_conv_model(batch_size, tasks):
   model = TensorGraph(
@@ -99,14 +98,41 @@ def graph_conv_model(batch_size, tasks):
   return model, feed_dict_generator, labels, task_weights
 
 
-=======
->>>>>>> e8593fc7fa03ffa0289248c6c24d6643cb5df739
 # Load Tox21 dataset
-tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split = 'random')
+if str(sys.argv[1]) == "all":
+  task_arg = tox21_tasks = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase', 'NR-ER',
+               'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
+               'SR-HSE', 'SR-MMP', 'SR-p53', 'FDA_APPROVED', 'CT_TOX']
+else:
+  task_arg = [str(sys.argv[1])]
+
+num_epochs = int(str(sys.argv[2]))
+print(str(sys.argv))
+
+tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split='random', tasks = task_arg)
 train_dataset, valid_dataset, test_dataset = tox21_datasets
 print(train_dataset.data_dir)
 print(valid_dataset.data_dir)
 print(test_dataset.data_dir)
+
+#test to see if they are all positive or negative
+#valid_y = valid_dataset.y
+#print("\n\n\n\nValid y shapee")
+#print(valid_y.shape)
+#for y in valid_y:
+ # if ((y==y[0]).all()) != True:
+ #   print(y[0])
+
+#train_y = train_dataset.y
+#for y in train_y:
+ # if ((y==y[0]).all()) != True:
+   # print(y[0])
+
+#test_y = test_dataset.y
+#for y in test_y:
+#  if ((y==y[0]).all()) != True:
+#    print(y[0])
+
 
 # Fit models
 metric = dc.metrics.Metric(
@@ -115,35 +141,29 @@ metric = dc.metrics.Metric(
 # Batch size of models
 batch_size = 100
 
-model = GraphConvTensorGraph(
-    len(tox21_tasks), batch_size=batch_size, mode='classification')
+model, generator, labels, task_weights = graph_conv_model(batch_size,
+                                                          tox21_tasks)
 
-<<<<<<< HEAD
-model.fit_generator(generator(train_dataset, batch_size, epochs=20))
+model.fit_generator(generator(train_dataset, batch_size, epochs=num_epochs))
 
 print("Evaluating model")
 train_scores = model.evaluate_generator(
     generator(train_dataset, batch_size), [metric],
     transformers,
     labels,
-    weights=[task_weights])
+#    weights=[task_weights], per_task_metrics = True)
+weights=[task_weights])
 valid_scores = model.evaluate_generator(
     generator(valid_dataset, batch_size), [metric],
     transformers,
     labels,
-    weights=[task_weights])
+weights=[task_weights])
+#    weights=[task_weights], per_task_metrics = True)
 test_scores = model.evaluate_generator(
-    generator(valid_dataset, batch_size), [metric], 
+    generator(test_dataset, batch_size), [metric], 
     transformers, 
     labels, 
     weights=[task_weights])
-=======
-model.fit(train_dataset, nb_epoch=10)
-
-print("Evaluating model")
-train_scores = model.evaluate(train_dataset, [metric], transformers)
-valid_scores = model.evaluate(valid_dataset, [metric], transformers)
->>>>>>> e8593fc7fa03ffa0289248c6c24d6643cb5df739
 
 print("Train scores")
 print(train_scores)
@@ -153,3 +173,5 @@ print(valid_scores)
 
 print("Test scores")
 print(test_scores)
+
+record_info("tox21_clintox.csv", train_scores, valid_scores, test_scores, num_epochs, len(tox21_tasks), task_arg)

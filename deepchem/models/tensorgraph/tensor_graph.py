@@ -7,6 +7,8 @@ import numpy as np
 import os
 import six
 import tensorflow as tf
+
+from pprint import pprint
 from tensorflow.python.framework.errors_impl import OutOfRangeError
 
 from deepchem.data import NumpyDataset
@@ -32,30 +34,30 @@ class TensorGraph(Model):
                learning_rate=0.001,
                **kwargs):
     """
-    TODO(LESWING) allow a model to change its learning rate
-    Parameters
-    ----------
-    tensorboard: bool
-      Should we log to model_dir data for tensorboard?
-    tensorboard_log_frequency: int
-      How many training batches before logging tensorboard?
-    batch_size: int
-      default batch size for training and evaluating
-    use_queue: boolean
-      if True when building we will create a tf.FIFO queue, which will hold
-      all features, weights, and labels.  We will feed the inputs into this
-      queue in batches of self.batch_size in a separate thread from the
-      thread training the model.  You cannot use a queue when
-      batches are not of consistent size
-    mode: str
-      "regression" or "classification".  "classification" models on
-      predict will do an argmax(axis=2) to determine the class of the
-      prediction.
-    graph: tensorflow.Graph
-      the Graph in which to create Tensorflow objects.  If None, a new Graph
-      is created.
-    kwargs
-    """
+        TODO(LESWING) allow a model to change its learning rate
+        Parameters
+        ----------
+        tensorboard: bool
+          Should we log to model_dir data for tensorboard?
+        tensorboard_log_frequency: int
+          How many training batches before logging tensorboard?
+        batch_size: int
+          default batch size for training and evaluating
+        use_queue: boolean
+          if True when building we will create a tf.FIFO queue, which will hold
+          all features, weights, and labels.  We will feed the inputs into this
+          queue in batches of self.batch_size in a separate thread from the
+          thread training the model.  You cannot use a queue when
+          batches are not of consistent size
+        mode: str
+          "regression" or "classification".  "classification" models on
+          predict will do an argmax(axis=2) to determine the class of the
+          prediction.
+        graph: tensorflow.Graph
+          the Graph in which to create Tensorflow objects.  If None, a new Graph
+          is created.
+        kwargs
+        """
 
     # Layer Management
     self.nxgraph = nx.DiGraph()
@@ -158,7 +160,9 @@ class TensorGraph(Model):
               args=(self, feed_dict_generator, self._get_tf("Graph"), sess,
                     coord))
           enqueue_thread.start()
+
         output_tensors = [x.out_tensor for x in self.outputs]
+
         fetches = output_tensors + [train_op, self.loss.out_tensor]
         for feed_dict in create_feed_dict():
           try:
@@ -186,19 +190,19 @@ class TensorGraph(Model):
                                                           avg_loss))
         saver.save(sess, self.save_file, global_step=self.global_step)
         self.last_checkpoint = saver.last_checkpoints[-1]
-      ############################################################## TIMING
+      # TIMING
       time2 = time.time()
       print("TIMING: model fitting took %0.3f s" % (time2 - time1))
-      ############################################################## TIMING
+      # TIMING
 
   def _log_tensorboard(self, summary):
     """
-    TODO(LESWING) set epoch
-    Parameters
-    ----------
-    Returns
-    -------
-    """
+        TODO(LESWING) set epoch
+        Parameters
+        ----------
+        Returns
+        -------
+        """
     global_step = int(self.global_step)
     writer = self._get_tf("FileWriter")
     writer.reopen()
@@ -241,16 +245,16 @@ class TensorGraph(Model):
 
   def predict_on_generator(self, generator, transformers=[]):
     """Generates output predictions for the input samples,
-      processing the samples in a batched way.
+          processing the samples in a batched way.
 
-    # Arguments
-        x: the input data, as a Numpy array.
-        batch_size: integer.
-        verbose: verbosity mode, 0 or 1.
+        # Arguments
+            x: the input data, as a Numpy array.
+            batch_size: integer.
+            verbose: verbosity mode, 0 or 1.
 
-    # Returns
-        A Numpy array of predictions.
-    """
+        # Returns
+            A Numpy array of predictions.
+        """
     retval = self.predict_proba_on_generator(generator, transformers)
     if self.mode == 'classification':
       retval = np.expand_dims(from_one_hot(retval, axis=2), axis=1)
@@ -258,9 +262,9 @@ class TensorGraph(Model):
 
   def predict_proba_on_generator(self, generator, transformers=[]):
     """
-    Returns:
-      y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
-    """
+        Returns:
+          y_pred: numpy ndarray of shape (n_samples, n_classes*n_tasks)
+        """
     if not self.built:
       self.build()
     with self._get_tf("Graph").as_default():
@@ -318,16 +322,16 @@ class TensorGraph(Model):
 
   def predict_on_batch(self, X, sess=None, transformers=[]):
     """Generates output predictions for the input samples,
-      processing the samples in a batched way.
+          processing the samples in a batched way.
 
-    # Arguments
-        x: the input data, as a Numpy array.
-        batch_size: integer.
-        verbose: verbosity mode, 0 or 1.
+        # Arguments
+            x: the input data, as a Numpy array.
+            batch_size: integer.
+            verbose: verbosity mode, 0 or 1.
 
-    # Returns
-        A Numpy array of predictions.
-    """
+        # Returns
+            A Numpy array of predictions.
+        """
     dataset = NumpyDataset(X=X, y=None)
     generator = self.default_generator(dataset, predict=True, pad_batches=False)
     return self.predict_on_generator(generator, transformers)
@@ -339,11 +343,11 @@ class TensorGraph(Model):
 
   def predict(self, dataset, transformers=[], batch_size=None):
     """
-    Uses self to make predictions on provided Dataset object.
+        Uses self to make predictions on provided Dataset object.
 
-    Returns:
-      y_pred: numpy ndarray of shape (n_samples,)
-    """
+        Returns:
+          y_pred: numpy ndarray of shape (n_samples,)
+        """
     generator = self.default_generator(dataset, predict=True, pad_batches=False)
     return self.predict_on_generator(generator, transformers)
 
@@ -393,7 +397,7 @@ class TensorGraph(Model):
 
   def _install_queue(self):
     """
-    """
+        """
     if not self.use_queue or self.queue_installed:
       for layer in self.features + self.labels + self.task_weights:
         layer.pre_queue = True
@@ -428,9 +432,9 @@ class TensorGraph(Model):
   def set_optimizer(self, optimizer):
     """Set the optimizer to use for fitting.
 
-    The argument should be a callable object (most often a TFWrapper) that constructs
-    a Tensorflow optimizer when called.
-    """
+        The argument should be a callable object (most often a TFWrapper) that constructs
+        a Tensorflow optimizer when called.
+        """
     self.optimizer = optimizer
 
   def get_pickling_errors(self, obj, seen=None):
@@ -545,16 +549,16 @@ class TensorGraph(Model):
 
   def _get_tf(self, obj):
     """
-    TODO(LESWING) REALLY NEED TO DOCUMENT THIS
-    Parameters
-    ----------
-    obj
+        TODO(LESWING) REALLY NEED TO DOCUMENT THIS
+        Parameters
+        ----------
+        obj
 
-    Returns
-    -------
-    TensorFlow Object
+        Returns
+        -------
+        TensorFlow Object
 
-    """
+        """
 
     if obj in self.tensor_objects and self.tensor_objects[obj] is not None:
       return self.tensor_objects[obj]
@@ -577,17 +581,17 @@ class TensorGraph(Model):
 
   def _initialize_weights(self, sess, saver):
     """
-    Parameters
-    ----------
-    sess: tf.Session
-      The Session must be open
-    saver: tf.train.Saver
-      A saver object to save/restore checkpoints
+        Parameters
+        ----------
+        sess: tf.Session
+          The Session must be open
+        saver: tf.train.Saver
+          A saver object to save/restore checkpoints
 
-    Returns
-    -------
+        Returns
+        -------
 
-    """
+        """
     if self.last_checkpoint is None:
       sess.run(tf.global_variables_initializer())
       saver.save(sess, self.save_file, global_step=self.global_step)
@@ -617,19 +621,19 @@ class TensorGraph(Model):
 
 def _enqueue_batch(tg, generator, graph, sess, coord):
   """
-  Function to load data into
-  Parameters
-  ----------
-  tg
-  dataset
-  graph
-  sess
-  coord
+    Function to load data into
+    Parameters
+    ----------
+    tg
+    dataset
+    graph
+    sess
+    coord
 
-  Returns
-  -------
+    Returns
+    -------
 
-  """
+    """
   with graph.as_default():
     num_samples = 0
     for feed_dict in generator:
@@ -651,22 +655,22 @@ def _enqueue_batch(tg, generator, graph, sess, coord):
 class TFWrapper(object):
   """This class exists as a workaround for Tensorflow objects not being picklable.
 
-  The job of a TFWrapper is to create Tensorflow objects by passing defined arguments
-  to a constructor.  There are cases where we really want to store Tensorflow objects
-  of various sorts (optimizers, initializers, etc.), but we can't because they cannot
-  be pickled.  So instead we store a TFWrapper that creates the object when needed.
-  """
+    The job of a TFWrapper is to create Tensorflow objects by passing defined arguments
+    to a constructor.  There are cases where we really want to store Tensorflow objects
+    of various sorts (optimizers, initializers, etc.), but we can't because they cannot
+    be pickled.  So instead we store a TFWrapper that creates the object when needed.
+    """
 
   def __init__(self, tf_class, **kwargs):
     """Create a TFWrapper for constructing a Tensorflow object.
 
-    Parameters
-    ----------
-    tf_class: class
-      the type of object to create
-    kwargs:
-      any other arguments will be passed on to the object's constructor
-    """
+        Parameters
+        ----------
+        tf_class: class
+          the type of object to create
+        kwargs:
+          any other arguments will be passed on to the object's constructor
+        """
     self.tf_class = tf_class
     self.kwargs = kwargs
 
