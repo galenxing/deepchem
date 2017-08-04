@@ -162,7 +162,7 @@ class AlphaShare(Layer):
         for input_tensor in inputs:
             subspaces.append(tf.reshape(input_tensor[:, :subspace_size], [-1]))
             subspaces.append(tf.reshape(input_tensor[:, subspace_size:], [-1]))
-        n_alphas = len(inputs) * 2
+        n_alphas = len(subspaces)
         subspaces = tf.reshape(tf.stack(subspaces), [n_alphas, -1])
 
         # create the alpha learnable parameters
@@ -193,6 +193,15 @@ class AlphaShare(Layer):
         if set_tensors:
             self.out_tensor = out_tensor
         return out_tensor
+
+  def none_tensors(self):
+    out_tensor, alphas = self.out_tensor, self.alphas
+    self.out_tensor = None
+    self.alphas = None
+    return out_tensor,alphas
+
+  def set_tensors(self, tensor):
+    self.out_tensor, self.alphas = tensor
 
 
 class LayerSplitter(Layer):
@@ -270,6 +279,15 @@ class BetaShare(Layer):
         self.betas = betas
         self.out_tensor = tf.reshape(out_tensor, [-1, original_cols])
         return out_tensor
+
+    def none_tensors(self):
+      out_tensor, betas = self.out_tensor, self.betas
+      self.out_tensor = None
+      self.betas = None
+      return out_tensor,betas
+
+    def set_tensors(self, tensor):
+      self.out_tensor, self.betas = tensor
 
 
 class Conv1D(Layer):
