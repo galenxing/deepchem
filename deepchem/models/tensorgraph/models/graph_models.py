@@ -598,7 +598,7 @@ class GraphConvTensorGraph(TensorGraph):
         self.default_generator(dataset),
         metrics,
         labels=self.my_labels,
-        weights=[self.my_task_weights])
+        weights=[self.my_task_weights], per_task_metrics = per_task_metrics)
 
   def predict_on_smiles(self, smiles, transformers):
     max_index = len(smiles)

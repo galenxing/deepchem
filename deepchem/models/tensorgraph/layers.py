@@ -194,14 +194,14 @@ class AlphaShare(Layer):
             self.out_tensor = out_tensor
         return out_tensor
 
-  def none_tensors(self):
-    out_tensor, alphas = self.out_tensor, self.alphas
-    self.out_tensor = None
-    self.alphas = None
-    return out_tensor,alphas
+    def none_tensors(self):
+      out_tensor, alphas = self.out_tensor, self.alphas
+      self.out_tensor = None
+      self.alphas = None
+      return out_tensor,alphas
 
-  def set_tensors(self, tensor):
-    self.out_tensor, self.alphas = tensor
+    def set_tensors(self, tensor):
+      self.out_tensor, self.alphas = tensor
 
 
 class LayerSplitter(Layer):
