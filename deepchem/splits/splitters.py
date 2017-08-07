@@ -129,10 +129,17 @@ class Splitter(object):
                                  log_every_n=1000,
                                  verbose=True):
     """
-            Splits self into train/validation/test sets.
+    Splits self into train/validation/test sets.
 
-            Returns Dataset objects.
-            """
+    Returns Dataset objects.
+    """
+
+
+    print(dataset.get_shape())
+   # print(dataset.y[:20])
+    print(dataset.w[:20,7:10])
+    print(dataset.ids.shape)
+   # exit()
     log("Computing train/valid/test indices", self.verbose)
     train_inds, valid_inds, test_inds = self.split(
         dataset,
@@ -165,14 +172,14 @@ class Splitter(object):
 
     print('25 train')
     print(train_inds_25)
+
     print('50 train')
-
     print(train_inds_50)
+
     print('75 train')
-
     print(train_inds_75)
+    
     print('full train')
-
     print(train_inds_100)
 
     train_dataset_25 = dataset.select(train_inds_25, train_dir_25)
@@ -185,7 +192,10 @@ class Splitter(object):
     else:
       valid_dataset = None
     test_dataset = dataset.select(test_inds, test_dir)
-
+    print('these are the test inds')
+    print(valid_inds)
+    print(test_inds)
+    #exit()
     train_dataset = (train_dataset_25, train_dataset_50, train_dataset_75,
                      train_dataset_100)
 

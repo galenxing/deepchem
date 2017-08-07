@@ -591,14 +591,22 @@ class GraphConvTensorGraph(TensorGraph):
           results.append(result)
         return np.concatenate(results, axis=0)
 
-  def evaluate(self, dataset, metrics, transformers=[], per_task_metrics=False):
+  def evaluate(self,
+               dataset,
+               metrics,
+               transformers=[],
+               outputs=None,
+               per_task_metrics=False):
     if not self.built:
       self.build()
     return self.evaluate_generator(
         self.default_generator(dataset),
         metrics,
+        transformers=transformers,
+        outputs=outputs,
         labels=self.my_labels,
-        weights=[self.my_task_weights], per_task_metrics = per_task_metrics)
+        weights=[self.my_task_weights],
+        per_task_metrics=per_task_metrics)
 
   def predict_on_smiles(self, smiles, transformers):
     max_index = len(smiles)

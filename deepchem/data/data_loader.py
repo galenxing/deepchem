@@ -50,6 +50,9 @@ def convert_df_to_numpy(df, tasks, verbose=False):
         y[ind, task] = 0.
         w[ind, task] = 0.
 
+  print(w[:20])
+#  exit()
+
   return y.astype(float), w.astype(float)
 
 
