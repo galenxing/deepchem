@@ -407,6 +407,7 @@ class DiskDataset(Dataset):
     """
     self.data_dir = data_dir
     self.verbose = verbose
+    self.percentage = 0
 
     log("Loading dataset from disk.", self.verbose)
     if os.path.exists(self._get_metadata_filename()):
@@ -994,6 +995,10 @@ class DiskDataset(Dataset):
     for (_, _, w_b, _) in self.itershards():
       ws.append(np.array(w_b))
     return np.vstack(ws)
+
+  @property
+  def percentage(self):
+    return self.percentage
 
   def __len__(self):
     """

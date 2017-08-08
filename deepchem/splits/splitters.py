@@ -171,16 +171,16 @@ class Splitter(object):
     train_inds_100 = train_inds
 
     print('25 train')
-    print(train_inds_25)
+    print(train_inds_25[:20])
 
     print('50 train')
-    print(train_inds_50)
+    print(train_inds_50[:20])
 
     print('75 train')
-    print(train_inds_75)
+    print(train_inds_75[:20])
     
     print('full train')
-    print(train_inds_100)
+    print(train_inds_100[:20])
 
     train_dataset_25 = dataset.select(train_inds_25, train_dir_25)
     train_dataset_50 = dataset.select(train_inds_50, train_dir_50)
