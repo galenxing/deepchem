@@ -174,7 +174,6 @@ class AlphaShare(Layer):
 
         # concatenate subspaces, reshape to size of original input, then stack
         # such that out_tensor has shape (2,?,original_cols)
-
         count = 0
         out_tensor = []
         tmp_tensor = []
