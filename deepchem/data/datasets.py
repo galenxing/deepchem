@@ -407,7 +407,7 @@ class DiskDataset(Dataset):
     """
     self.data_dir = data_dir
     self.verbose = verbose
-    self.percentage = 0
+    
 
     log("Loading dataset from disk.", self.verbose)
     if os.path.exists(self._get_metadata_filename()):
