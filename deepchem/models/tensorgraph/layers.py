@@ -222,6 +222,7 @@ class LayerSplitter(Layer):
         super(LayerSplitter, self).__init__(**kwargs)
 
     def create_tensor(self, in_layers=None, set_tensors=True, **kwargs):
+        print(in_layers)
         inputs = self._get_input_tensors(in_layers)[0]
         self.out_tensor = inputs[self.tower_num, :]
         return self.out_tensor

@@ -407,6 +407,7 @@ class DiskDataset(Dataset):
     """
     self.data_dir = data_dir
     self.verbose = verbose
+    self.percentage = 0
     
 
     log("Loading dataset from disk.", self.verbose)
@@ -996,7 +997,6 @@ class DiskDataset(Dataset):
       ws.append(np.array(w_b))
     return np.vstack(ws)
 
-  @property
   def percentage(self):
     return self.percentage
 
