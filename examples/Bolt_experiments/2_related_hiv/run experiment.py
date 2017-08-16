@@ -16,6 +16,7 @@ from hiv_dataset import load_hiv
 from gc_sluice_network import graph_conv_sluice
 from record_info import record_info
 
+
 def addHIVdata(tox21_dataset, HIV_dataset):
   hiv_X = HIV_dataset.X
   hiv_y = HIV_dataset.y
@@ -31,11 +32,11 @@ def addHIVdata(tox21_dataset, HIV_dataset):
 
   nrows = tox21_X.shape[0]
   hiv_variables = [hiv_X, hiv_y, hiv_w, hiv_ids]
-  hiv25, hiv50, hiv75, hiv100 = [],[],[],[]
+  hiv25, hiv50, hiv75, hiv100 = [], [], [], []
   for var in hiv_variables:
-    hiv25.append(var[:int(nrows*.25)])
-    hiv50.append(var[:int(nrows*.5)])
-    hiv75.append(var[:int(nrows*.75)])
+    hiv25.append(var[:int(nrows * .25)])
+    hiv50.append(var[:int(nrows * .5)])
+    hiv75.append(var[:int(nrows * .75)])
     hiv100.append(var)
 
   hiv_dataset_percentages = [hiv25, hiv50, hiv75, hiv100]
@@ -53,19 +54,21 @@ def addHIVdata(tox21_dataset, HIV_dataset):
         temp1 = np.zeros((var.shape[0], tox21[count].shape[1]))
         temp2 = np.zeros((tox21[count].shape[0], var.shape[1]))
         temp1 = np.concatenate((tox21[count], temp1))
-        temp2 = np.concatenate((temp2,var))
-        combined.append(np.concatenate((temp1, temp2), axis = 1))
-  
+        temp2 = np.concatenate((temp2, var))
+        combined.append(np.concatenate((temp1, temp2), axis=1))
+
   print(len(combined))
 
   i = 0
   train_datasets = []
-  for count in range(0,16,4):
+  for count in range(0, 16, 4):
     print(combined[count])
-    print(combined[count+1])
-    print(combined[count+2])
-    print(combined[count+3])
-    train_datasets.append(dc.data.DiskDataset.from_numpy(combined[count], combined[count+1], combined[count+2], combined[count+3]))
+    print(combined[count + 1])
+    print(combined[count + 2])
+    print(combined[count + 3])
+    train_datasets.append(
+        dc.data.DiskDataset.from_numpy(combined[count], combined[
+            count + 1], combined[count + 2], combined[count + 3]))
 
   print(len(train_datasets))
 
@@ -75,18 +78,23 @@ def addHIVdata(tox21_dataset, HIV_dataset):
     print(dataset.w.shape)
     print(dataset.ids.shape)
 
-tox21_train = dc.data.DiskDataset(data_dir='/tmp/tox21_fingerprint_train')
-valid_dataset = dc.data.DiskDataset(data_dir='/tmp/tox21_fingerprint_valid')
-hiv_train = dc.data.DiskDataset(data_dir = 'hiv_random_train')
+  return train_datasets
+
+
+tox21_train = dc.data.DiskDataset(
+    data_dir='../post_split/tox21_fingerprint_train')
+valid_dataset = dc.data.DiskDataset(
+    data_dir='../post_split/tox21_fingerprint_valid')
+hiv_train = dc.data.DiskDataset(data_dir='hiv_random_train')
 
 train_datasets = addHIVdata(tox21_train, hiv_train)
 
 batch_size = 50
 weights = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
-sluice_layout = [0,0,0,0,0,0,0,0]
+sluice_layout = [1, 0, 0, 1, 0, 0, 0, 1]
 epoch = 20
-
-for train in train_datasets:
+percentage_of_hiv = [0.25, 0.5, 0.75, 1]
+for count, train in enumerate(train_datasets):
   for weight in weights:
     print(weight)
     # Load Tox21 dataset
@@ -96,27 +104,29 @@ for train in train_datasets:
 
     # Batch size of models
     model, generator, labels, task_weights = graph_conv_sluice(
-        n_tasks=len(tox21_tasks),
+        n_tasks=13,
         batch_size=batch_size,
         mode='classification',
         minimizer=weight,
-        sluice_layout=combo,
+        sluice_layout=sluice_layout,
         tensorboard=True)
 
     model.fit_generator(generator(train, batch_size, epochs=epoch))
 
     print("Evaluating model")
     train_scores = model.evaluate_generator(
-        generator(train_dataset, batch_size), [metric],
-        transformers,
-        labels,
+        generator(train, batch_size),
+        metrics=[metric],
+        transformers=[],
+        labels=labels,
         weights=[task_weights],
         per_task_metrics=True)
 
     valid_scores = model.evaluate_generator(
-        generator(valid_dataset, batch_size), [metric],
-        transformers,
-        labels,
+        generator(valid_dataset, batch_size),
+        metrics=[metric],
+        transformers=[],
+        labels=labels,
         weights=[task_weights],
         per_task_metrics=True)
 
@@ -127,9 +137,9 @@ for train in train_datasets:
     print(valid_scores)
 
     record_info(
-        file_name='sluice_hp_search_without_epochs.csv',
+        file_name='2_random_hiv.csv',
         train=train_scores,
         valid=valid_scores,
-        weight=weight)
-
-    
+        weight=weight,
+        epochs=epoch,
+        percentage_of_hiv=percentage_of_hiv[count])

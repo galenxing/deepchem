@@ -1,7 +1,9 @@
 """
 Script that records scores, epochs, and number of tasks
 """
-def record_info(file_name, train, valid, weight):
+
+
+def record_info(file_name, train, valid, weight, percentage_of_hiv, epochs):
   file_object = open(file_name, "a")
   for value in train[1].values():
     for score in value:
@@ -11,6 +13,7 @@ def record_info(file_name, train, valid, weight):
   for value in valid[1].values():
     for score in value:
       file_object.write(str(score) + ',')
-  file_object.write(str(weight) + ',' + str(combo) + '\n')
-  
+  file_object.write(
+      str(weight) + ',' + str(percentage_of_hiv) + ',' + str(epochs) + '\n')
+
   print("done")

@@ -25,7 +25,7 @@ def load_hiv(featurizer='ECFP', split='index'):
   loader = dc.data.CSVLoader(
       tasks=hiv_tasks, smiles_field="smiles", featurizer=featurizer_func)
   dataset = loader.featurize(dataset_file, shard_size=8192)
-  # Initialize transformers 
+  # Initialize transformers
   transformers = [
       dc.trans.BalancingTransformer(transform_w=True, dataset=dataset)
   ]
@@ -42,7 +42,8 @@ def load_hiv(featurizer='ECFP', split='index'):
   }
   splitter = splitters[split]
   save_dir = 'hiv_' + split
-  train, valid, test = splitter.train_valid_test_split(dataset,
+  train, valid, test = splitter.train_valid_test_split(
+      dataset,
       frac_train=1,
       frac_valid=0,
       frac_test=0,
