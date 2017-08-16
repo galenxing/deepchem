@@ -17,7 +17,7 @@ from gc_sluice_network import graph_conv_sluice
 from record_info import record_info
 
 
-def addHIVdata(tox21_dataset, HIV_dataset):
+def addHIVdata(tox21_dataset, HIV_dataset, tox21_valid):
   hiv_X = HIV_dataset.X
   hiv_y = HIV_dataset.y
   hiv_w = HIV_dataset.w
@@ -78,7 +78,16 @@ def addHIVdata(tox21_dataset, HIV_dataset):
     print(dataset.w.shape)
     print(dataset.ids.shape)
 
-  return train_datasets
+  valid_y = tox21_valid.y
+  valid_w = tox21_valid.w
+
+  temp = np.zeros((valid_y.shape[0], 1))
+  valid_y = np.concatenate((valid_y, temp), axis =1)
+  valid_w = np.concatenate((valid_w, temp), axis =1)
+
+  valid = dc.data.DiskDataset.from_numpy(tox21_valid.X, valid_y, valid_w, tox21_valid.ids)
+
+  return train_datasets, valid
 
 
 tox21_train = dc.data.DiskDataset(
@@ -87,7 +96,7 @@ valid_dataset = dc.data.DiskDataset(
     data_dir='../post_split/tox21_fingerprint_valid')
 hiv_train = dc.data.DiskDataset(data_dir='hiv_random_train')
 
-train_datasets = addHIVdata(tox21_train, hiv_train)
+train_datasets, valid_dataset = addHIVdata(tox21_train, hiv_train, valid_dataset)
 
 batch_size = 50
 weights = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
