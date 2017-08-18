@@ -13,8 +13,9 @@ import tensorflow as tf
 tf.set_random_seed(123)
 import deepchem as dc
 from hiv_dataset import load_hiv
-from gc_sluice_network import graph_conv_sluice
 from record_info import record_info
+from deepchem.models.tensorgraph.models.graph_models import GraphConvTensorGraph
+
 
 
 def addHIVdata(tox21_dataset, HIV_dataset, tox21_valid):
@@ -112,7 +113,7 @@ for count, train in enumerate(train_datasets):
         dc.metrics.roc_auc_score, np.mean, mode="classification")
 
     model = GraphConvTensorGraph(
-        num_tasks=13, batch_size=batch_size, mode='classification')
+        n_tasks=13, batch_size=batch_size, mode='classification')
     model.fit(train, nb_epoch=epoch)
 
     print("Evaluating model")
