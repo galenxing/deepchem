@@ -32,8 +32,8 @@ for i in range(0,3):
   #  featurizer='GraphConv', split='random')
   #train_dataset, valid_dataset, test_dataset = tox21_datasets
 
-  train_dataset = dc.data.DiskDataset(data_dir='../tox21_scaffold_train_2')
-  valid_dataset = dc.data.DiskDataset(data_dir='../tox21_scaffold_valid_2')
+  train_dataset = dc.data.DiskDataset(data_dir='../tox21_index_train')
+  valid_dataset = dc.data.DiskDataset(data_dir='../tox21_index_valid')
 
   print(train_dataset.data_dir)
   print(valid_dataset.data_dir)

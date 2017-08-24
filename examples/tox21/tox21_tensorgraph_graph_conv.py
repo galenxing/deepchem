@@ -95,15 +95,15 @@ def graph_conv_model(batch_size, tasks):
 
 
 # Load Tox21 dataset
-tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split='scaffold')
+#tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split='scaffold')
 
 tox21_tasks = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase', 'NR-ER',
                  'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
                  'SR-HSE', 'SR-MMP', 'SR-p53']
-train_dataset, valid_dataset, test_dataset = tox21_datasets
+#train_dataset, valid_dataset, test_dataset = tox21_datasets
 
-#train_dataset = dc.data.DiskDataset(data_dir = 'tox21_fingerprint_train')
-#valid_dataset = dc.data.DiskDataset(data_dir = 'tox21_fingerprint_valid')
+train_dataset = dc.data.DiskDataset(data_dir = 'tox21_index_train')
+valid_dataset = dc.data.DiskDataset(data_dir = 'tox21_index_valid')
 
 print(train_dataset.data_dir)
 print(valid_dataset.data_dir)
@@ -127,6 +127,7 @@ for i in range(0,3):
       labels,
       weights=[task_weights], 
       per_task_metrics = True)
+  
   valid_scores = model.evaluate_generator(
       generator(valid_dataset, batch_size), [metric],
       transformers,
