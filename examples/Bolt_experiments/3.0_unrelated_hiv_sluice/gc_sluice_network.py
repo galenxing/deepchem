@@ -256,7 +256,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
         my_labels.append(label)
         cost = SoftMaxCrossEntropy(in_layers=[label, classification])
         minimize = Constant(HIV_minimizer)
-        cost = Multiply(in_layers=[HIV_minimizer, minimize])
+        #hiv_cost = Multiply(in_layers=[HIV_minimizer, minimize])
 
       costs.append(cost)
     if mode == 'regression':
@@ -270,6 +270,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
 
   s_cost = SluiceLoss(in_layers=sluice_cost)
   entropy = Concat(in_layers=costs, axis=-1)
+
   my_task_weights = Weights(shape=(None, n_tasks))
   loss = WeightedError(in_layers=[entropy, my_task_weights])
 
