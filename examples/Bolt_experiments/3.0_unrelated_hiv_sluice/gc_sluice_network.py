@@ -235,6 +235,12 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
 
         count += 1
         softmax = SoftMax(in_layers=[classification])
+        model.add_output(softmax)
+        label = Label(shape=(None, 2))
+        my_labels.append(label)
+        cost = SoftMaxCrossEntropy(in_layers=[label, classification])
+
+
       else:
         if as_started:
           classification = Dense(
@@ -245,14 +251,13 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
 
         count += 1
         softmax = SoftMax(in_layers=[classification])
+        model.add_output(softmax)
+        label = Label(shape=(None, 2))
+        my_labels.append(label)
+        cost = SoftMaxCrossEntropy(in_layers=[label, classification])
         minimize = Constant(HIV_minimizer)
-        softmax = Multiply(in_layers= [HIV_minimizer, minimize])        
+        cost = Multiply(in_layers=[HIV_minimizer, minimize])
 
-      model.add_output(softmax)
-
-      label = Label(shape=(None, 2))
-      my_labels.append(label)
-      cost = SoftMaxCrossEntropy(in_layers=[label, classification])
       costs.append(cost)
     if mode == 'regression':
       regression = Dense(out_channels=1, activation_fn=None, in_layers=[gg1])
