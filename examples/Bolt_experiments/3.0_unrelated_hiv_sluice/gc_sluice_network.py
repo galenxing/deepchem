@@ -245,7 +245,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
 
         count += 1
         softmax = SoftMax(in_layers=[classification])
-        minimize = Constat(HIV_minimizer)
+        minimize = Constant(HIV_minimizer)
         softmax = Multiply(in_layers= [HIV_minimizer, minimize])        
 
       model.add_output(softmax)
