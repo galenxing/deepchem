@@ -17,7 +17,7 @@ model_dir = 'tmp/graphconv'
 
 
 def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
-                      tensorboard):
+                      tensorboard, HIV_minimizer):
   model = TensorGraph(
       model_dir=model_dir,
       batch_size=batch_size,
@@ -262,7 +262,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
       my_labels.append(label)
       cost = L2Loss(in_layers=[label, regression])
       costs.append(cost)
-      
+
   s_cost = SluiceLoss(in_layers=sluice_cost)
   entropy = Concat(in_layers=costs, axis=-1)
   my_task_weights = Weights(shape=(None, n_tasks))
