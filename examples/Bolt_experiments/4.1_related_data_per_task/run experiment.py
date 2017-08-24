@@ -26,10 +26,6 @@ batch_size = 50
 sluice_layout = [1, 0, 0, 1, 0, 0, 0, 1]
 epoch = 20
 
-
-
-
-
 for task in tasks:
   datasets, transformers = load_tox21(tasks=task, split='scaffold')
   train, valid, test = datasets

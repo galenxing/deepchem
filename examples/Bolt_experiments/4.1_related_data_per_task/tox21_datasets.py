@@ -46,5 +46,5 @@ def load_tox21(tasks, featurizer='GraphConv', split='index'):
 
   splitter = splitters[split]
   train, valid, test = splitter.train_valid_test_split(
-      dataset, frac_train=.8, frac_valid=.2, frac_test = 0)
+      dataset, frac_train=.8, frac_valid=.2, frac_test=0)
   return (train, valid, test), transformers
