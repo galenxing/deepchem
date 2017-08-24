@@ -20,10 +20,12 @@ import tensorflow as tf
 
 tf.set_random_seed(123)
 import deepchem as dc
+from record_info import record_info
 from tox21_datasets import load_tox21
 
 model_dir = "/tmp/graph_conv"
 
+transformers = []
 
 def graph_conv_model(batch_size, tasks):
   model = TensorGraph(
@@ -93,8 +95,16 @@ def graph_conv_model(batch_size, tasks):
 
 
 # Load Tox21 dataset
-tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv')
+tox21_tasks, tox21_datasets, transformers = load_tox21(featurizer='GraphConv', split='scaffold')
+
+tox21_tasks = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase', 'NR-ER',
+                 'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5',
+                 'SR-HSE', 'SR-MMP', 'SR-p53']
 train_dataset, valid_dataset, test_dataset = tox21_datasets
+
+#train_dataset = dc.data.DiskDataset(data_dir = 'tox21_fingerprint_train')
+#valid_dataset = dc.data.DiskDataset(data_dir = 'tox21_fingerprint_valid')
+
 print(train_dataset.data_dir)
 print(valid_dataset.data_dir)
 
@@ -104,26 +114,30 @@ metric = dc.metrics.Metric(
 
 # Batch size of models
 batch_size = 50
+for i in range(0,3):
+  model, generator, labels, task_weights = graph_conv_model(batch_size,
+                                                            tox21_tasks)
 
-model, generator, labels, task_weights = graph_conv_model(batch_size,
-                                                          tox21_tasks)
+  model.fit_generator(generator(train_dataset, batch_size, epochs=10))
 
-model.fit_generator(generator(train_dataset, batch_size, epochs=10))
+  print("Evaluating model")
+  train_scores = model.evaluate_generator(
+      generator(train_dataset, batch_size), [metric],
+      transformers,
+      labels,
+      weights=[task_weights], 
+      per_task_metrics = True)
+  valid_scores = model.evaluate_generator(
+      generator(valid_dataset, batch_size), [metric],
+      transformers,
+      labels,
+      weights=[task_weights],
+      per_task_metrics = True)
 
-print("Evaluating model")
-train_scores = model.evaluate_generator(
-    generator(train_dataset, batch_size), [metric],
-    transformers,
-    labels,
-    weights=[task_weights])
-valid_scores = model.evaluate_generator(
-    generator(valid_dataset, batch_size), [metric],
-    transformers,
-    labels,
-    weights=[task_weights])
+  print("Train scores")
+  print(train_scores)
 
-print("Train scores")
-print(train_scores)
+  print("Validation scores")
+  print(valid_scores)
 
-print("Validation scores")
-print(valid_scores)
+  record_info(file_name = 'temp.csv', train = train_scores, valid = valid_scores)

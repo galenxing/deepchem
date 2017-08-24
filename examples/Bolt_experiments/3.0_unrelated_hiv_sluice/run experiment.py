@@ -103,52 +103,55 @@ weights = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 sluice_layout = [1, 0, 0, 1, 0, 0, 0, 1]
 epoch = 20
 percentage_of_hiv = [0.25, 0.5, 0.75, 1]
+
 for count, train in enumerate(train_datasets):
   for weight in weights:
-    print(weight)
-    # Load Tox21 dataset
-    # Fit models
-    metric = dc.metrics.Metric(
-        dc.metrics.roc_auc_score, np.mean, mode="classification")
+    for i in range(0,4):
+      print(weight)
+      # Load Tox21 dataset
+      # Fit models
+      metric = dc.metrics.Metric(
+          dc.metrics.roc_auc_score, np.mean, mode="classification")
 
-    # Batch size of models
-    model, generator, labels, task_weights = graph_conv_sluice(
-        n_tasks=13,
-        batch_size=batch_size,
-        mode='classification',
-        minimizer=weight,
-        sluice_layout=sluice_layout,
-        tensorboard=True)
+      # Batch size of models
+      model, generator, labels, task_weights = graph_conv_sluice(
+          n_tasks=13,
+          batch_size=batch_size,
+          mode='classification',
+          minimizer=1,
+          HIV_minimizer = weight,
+          sluice_layout=sluice_layout,
+          tensorboard=True)
 
-    model.fit_generator(generator(train, batch_size, epochs=epoch))
+      model.fit_generator(generator(train, batch_size, epochs=epoch))
 
-    print("Evaluating model")
-    train_scores = model.evaluate_generator(
-        generator(train, batch_size),
-        metrics=[metric],
-        transformers=[],
-        labels=labels,
-        weights=[task_weights],
-        per_task_metrics=True)
+      print("Evaluating model")
+      train_scores = model.evaluate_generator(
+          generator(train, batch_size),
+          metrics=[metric],
+          transformers=[],
+          labels=labels,
+          weights=[task_weights],
+          per_task_metrics=True)
 
-    valid_scores = model.evaluate_generator(
-        generator(valid_dataset, batch_size),
-        metrics=[metric],
-        transformers=[],
-        labels=labels,
-        weights=[task_weights],
-        per_task_metrics=True)
+      valid_scores = model.evaluate_generator(
+          generator(valid_dataset, batch_size),
+          metrics=[metric],
+          transformers=[],
+          labels=labels,
+          weights=[task_weights],
+          per_task_metrics=True)
 
-    print("Train scores")
-    print(train_scores)
+      print("Train scores")
+      print(train_scores)
 
-    print("Validation scores")
-    print(valid_scores)
+      print("Validation scores")
+      print(valid_scores)
 
-    record_info(
-        file_name='3_random_hiv.csv',
-        train=train_scores,
-        valid=valid_scores,
-        weight=weight,
-        epochs=epoch,
-        percentage_of_hiv=percentage_of_hiv[count])
+      record_info(
+          file_name='3_random_hiv.csv',
+          train=train_scores,
+          valid=valid_scores,
+          weight=weight,
+          epochs=epoch,
+          percentage_of_hiv=percentage_of_hiv[count])

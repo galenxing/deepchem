@@ -225,7 +225,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
   count = 0
   for task in range(n_tasks):
     if mode == 'classification':
-      if count < n_tasks / 2:
+      if count < n_tasks-1:
         if as_started:
           classification = Dense(
               out_channels=2, activation_fn=None, in_layers=[prev_layer[0]])
@@ -234,6 +234,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
               out_channels=2, activation_fn=None, in_layers=[prev_node])
 
         count += 1
+        softmax = SoftMax(in_layers=[classification])
       else:
         if as_started:
           classification = Dense(
@@ -243,7 +244,10 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
               out_channels=2, activation_fn=None, in_layers=[prev_node])
 
         count += 1
-      softmax = SoftMax(in_layers=[classification])
+        softmax = SoftMax(in_layers=[classification])
+        minimize = Constat(HIV_minimizer)
+        softmax = Multiply(in_layers= [HIV_minimizer, minimize])        
+
       model.add_output(softmax)
 
       label = Label(shape=(None, 2))
@@ -258,6 +262,7 @@ def graph_conv_sluice(batch_size, n_tasks, sluice_layout, minimizer, mode,
       my_labels.append(label)
       cost = L2Loss(in_layers=[label, regression])
       costs.append(cost)
+      
   s_cost = SluiceLoss(in_layers=sluice_cost)
   entropy = Concat(in_layers=costs, axis=-1)
   my_task_weights = Weights(shape=(None, n_tasks))

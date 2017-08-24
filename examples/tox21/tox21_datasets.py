@@ -43,5 +43,5 @@ def load_tox21(featurizer='ECFP', split='index'):
                'fingerprint': dc.splits.FingerprintSplitter()}
 
   splitter = splitters[split]
-  train, valid, test = splitter.train_valid_test_split(dataset)
+  train, valid, test = splitter.train_valid_test_split(dataset, frac_train = 0.8, frac_valid = 0.2, frac_test = 0)
   return tox21_tasks, (train, valid, test), transformers
